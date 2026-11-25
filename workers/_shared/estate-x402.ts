@@ -22,12 +22,15 @@ import {
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
   X402_RESOURCE_DESCRIPTION,
+  x402AgentCard,
   x402HealthReport,
+  x402PaidVerifyStatus,
   x402PriceUsd,
   x402ScanFanout,
   X402_PUBLISHED_PAY_TO,
   type X402EnvVars,
   type X402HealthEnv,
+  type X402PaidVerifyStatus,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
 import {
@@ -87,8 +90,44 @@ export function isSisterX402Path(pathname: string): boolean {
     p === "/api/x402/health" ||
     p === "/api/x402/catalog" ||
     p === "/.well-known/x402.json" ||
-    p === "/.well-known/x402"
+    p === "/.well-known/x402" ||
+    isAgentCardPath(p)
   );
+}
+
+function isAgentCardPath(pathname: string): boolean {
+  const p = normalizePath(pathname);
+  return (
+    p === "/.well-known/agent-card.json" || p === "/.well-known/agent.json"
+  );
+}
+
+/**
+ * A2A Agent Card on a sister host. Same skills and live x402 terms as
+ * authichain.com; the A2A JSON-RPC endpoint and paid verify stay canonical on
+ * authichain.com, and this host's own /mcp is listed first so an agent that
+ * probed the brand can use its tools. No contact email, no ERC-8004.
+ */
+async function sisterAgentCardResponse(
+  request: Request,
+  env: SisterX402Env | undefined,
+  bound: boolean
+): Promise<Response> {
+  hydrateX402(env);
+  const url = new URL(request.url);
+  const brand = sisterBrandFromHost(url.hostname);
+  const base = await x402AgentCard(healthEnv(env, bound));
+  if (!brand) return json(200, base);
+  const site = ESTATE_BRANDS[brand];
+  return json(200, {
+    ...base,
+    name: `${site.name} by AuthiChain`,
+    provider: { organization: "AuthiChain", url: site.url },
+    additionalInterfaces: [
+      { url: `${site.url}/mcp`, transport: "HTTP+JSON" },
+      ...base.additionalInterfaces,
+    ],
+  });
 }
 
 function isHealthPath(pathname: string): boolean {
@@ -134,8 +173,24 @@ function hydrateX402(env?: SisterX402Env) {
   }
 }
 
-function healthEnv(env?: SisterX402Env): X402HealthEnv {
+/**
+ * Sister paid-verify status. Bound means this worker forwards to
+ * authichain.com's registry; sister-origin settlement is not claimed.
+ */
+export function sisterPaidVerifyStatus(bound: boolean): X402PaidVerifyStatus {
+  const status = x402PaidVerifyStatus(bound);
+  if (!status.bound) return status;
   return {
+    ...status,
+    detail:
+      "When bound, paid verification is forwarded to authichain.com's registry.",
+  };
+}
+
+function healthEnv(env?: SisterX402Env, bound = false): X402HealthEnv {
+  return {
+    // Bound only when a VERIFY_APP binding is present to forward paid calls.
+    X402_PAID_VERIFY_PATH: bound ? "verify_app" : undefined,
     X402_PAY_TO: publishedPayTo(env),
     X402_FACILITATOR_URL:
       env?.X402_FACILITATOR_URL || process.env.X402_FACILITATOR_URL,
@@ -153,18 +208,30 @@ function paidResourceUrl(request: Request): string {
   return `${url.protocol}//${url.host}${normalizePath(url.pathname)}`;
 }
 
-async function healthResponse(env?: SisterX402Env): Promise<Response> {
+async function healthResponse(
+  env?: SisterX402Env,
+  bound = false
+): Promise<Response> {
   hydrateX402(env);
-  return json(200, await x402HealthReport(healthEnv(env)));
+  const report = await x402HealthReport(healthEnv(env, bound));
+  // Sisters do not serve /api/v1/agent-verify (that path 404s here).
+  // Health must not advertise it; paid verify is POST /api/x402.
+  return json(200, {
+    ...report,
+    endpoint: "/api/x402",
+    aliases: report.aliases.filter(path => path !== "/api/v1/agent-verify"),
+    paidVerify: sisterPaidVerifyStatus(bound),
+  });
 }
 
 async function catalogResponse(
   request: Request,
-  env?: SisterX402Env
+  env?: SisterX402Env,
+  bound = false
 ): Promise<Response> {
   hydrateX402(env);
   const brand = sisterBrandFromHost(new URL(request.url).hostname);
-  return json(200, await sisterX402Catalog(brand, healthEnv(env)));
+  return json(200, await sisterX402Catalog(brand, healthEnv(env, bound)));
 }
 
 const CANONICAL_AGENT_VERIFY = "https://authichain.com/api/v1/agent-verify";
@@ -263,6 +330,28 @@ async function agentVerify(
   return json(503, X402_REGISTRY_NOT_BOUND);
 }
 
+/**
+ * Sister paid verify settles on authichain.com. The VERIFY_APP binding on a
+ * sister worker points at the authichain-com Worker, which owns the bound seal
+ * lookup and the authenticated facilitator settle. That Worker routes by host
+ * (non-authichain hosts go to microsites first), so every forwarded request is
+ * rewritten to the canonical https://authichain.com origin. The buyer's
+ * EIP-3009 authorization binds amount, payTo, asset and nonce, not the URL, so
+ * a payment signed against a sister 402 settles there unchanged.
+ */
+export function canonicalVerifyBinding(
+  binding: X402VerifyBinding
+): X402VerifyBinding {
+  return {
+    fetch(request: Request): Promise<Response> {
+      const url = new URL(request.url);
+      url.protocol = "https:";
+      url.host = "authichain.com";
+      return binding.fetch(new Request(url.toString(), request));
+    },
+  };
+}
+
 /** Serve GET/HEAD health + catalog and unpaid POST 402 on a sister landing. */
 export async function tryHandleSisterX402(
   request: Request,
@@ -273,6 +362,7 @@ export async function tryHandleSisterX402(
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (!isSisterX402Path(url.pathname)) return null;
+  const canonical = verifyApp ? canonicalVerifyBinding(verifyApp) : undefined;
 
   if (request.method === "HEAD") {
     return new Response(null, {
@@ -285,19 +375,23 @@ export async function tryHandleSisterX402(
   }
 
   if (request.method === "GET" && isCatalogPath(url.pathname)) {
-    return catalogResponse(request, env);
+    return catalogResponse(request, env, !!canonical);
   }
 
   if (request.method === "GET" && isFanoutPath(url.pathname)) {
     return fanoutResponse(request);
   }
 
+  if (request.method === "GET" && isAgentCardPath(url.pathname)) {
+    return sisterAgentCardResponse(request, env, !!canonical);
+  }
+
   if (request.method === "GET" && isHealthPath(url.pathname)) {
-    return healthResponse(env);
+    return healthResponse(env, !!canonical);
   }
 
   if (request.method === "POST" && isPaidPath(url.pathname)) {
-    return agentVerify(request, env, verifyApp, brand);
+    return agentVerify(request, env, canonical, brand);
   }
 
   return json(405, { error: "method not allowed" });

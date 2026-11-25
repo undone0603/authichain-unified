@@ -35,6 +35,12 @@ def test_guard_browser_route():
     assert unsafe.aborted and not unsafe.continued
 
 
+def test_inspect_uses_agentz_chromium_launcher():
+    source = Path(audit.__file__).read_text(encoding="utf-8")
+    assert "launch_playwright_chromium" in source
+    assert "playwright.chromium.launch" not in source
+
+
 def test_dry_run_never_launches_browser():
     ctx = SimpleNamespace(mode=SimpleNamespace(value="dry-run"))
     with patch.object(audit, "collect_evidence", side_effect=AssertionError("must not execute")):

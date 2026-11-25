@@ -82,8 +82,8 @@ class VoiceVisionTests(unittest.TestCase):
             with self.subTest(url=url), patch.dict(os.environ, {"AGENTZ_VISION_ENDPOINT": url}):
                 with self.assertRaises(ValueError):
                     _private_model_endpoint()
-        with patch.dict(os.environ, {"AGENTZ_VISION_ENDPOINT": "http://192.168.254.10:1234/v1/chat/completions"}):
-            self.assertIn("192.168.254.10", _private_model_endpoint())
+        with patch.dict(os.environ, {"AGENTZ_VISION_ENDPOINT": "http://10.0.0.5:1234/v1/chat/completions"}):
+            self.assertIn("10.0.0.5", _private_model_endpoint())
 
     def test_image_and_voice_prompt_reach_local_model(self):
         photo = "data:image/jpeg;base64," + base64.b64encode(b"\xff\xd8\xff\xe0mock").decode()

@@ -1,0 +1,14 @@
+name = "agentz-reqbin-rest-mcp"
+main = "worker.mjs"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ALLOW_INSECURE_HTTP = "false"
+REQBIN_ALLOWLIST = ""
+
+# Optional: set via `wrangler secret put REQBIN_BEARER_TOKEN`
+# Optional: bind to a custom route on authichain.com
+# [[routes]]
+# pattern = "signal.authichain.com/reqbin/*"
+# zone_name = "authichain.com"

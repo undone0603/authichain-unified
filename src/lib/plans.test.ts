@@ -197,6 +197,7 @@ describe("listedPlans", () => {
     const banned = [
       "50 workspace generations",
       "50 workspace generation",
+      "never expire",
       "never-expire",
       "no expiry",
       "no-expiry",
@@ -216,12 +217,18 @@ describe("listedPlans", () => {
         );
       }
     }
-    expect(planById("starter")?.description).toContain(
-      "One-time pack credits (Starter and Creator) never expire."
+    expect(planById("starter")?.description).toBe(
+      "100 AI QR generations for $29, paid once. No subscription."
     );
     expect(planById("starter")?.features).toContain(
-      "One-time pack credits (Starter and Creator) never expire"
+      "Starter and Creator include one-time pack credits."
     );
+    expect(planById("starter")?.description.toLowerCase()).not.toContain(
+      "never expire"
+    );
+    expect(
+      planById("starter")?.features?.join(" ").toLowerCase()
+    ).not.toContain("never expire");
   });
 
   it("gap-report SKU copy is email delivery, not a 10-business-day SLA", () => {

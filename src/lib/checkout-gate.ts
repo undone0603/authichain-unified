@@ -258,8 +258,7 @@ function pageShell(title: string, body: string): string {
  * Stripe IDs, prices, and Launch refillOnInvoicePaid stay unchanged.
  */
 const PLAN_DISPLAY_DESCRIPTION: Partial<Record<string, string>> = {
-  starter:
-    "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire.",
+  starter: "100 AI QR generations for $29, paid once. No subscription.",
 };
 
 export function displayPlanDescription(

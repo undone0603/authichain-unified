@@ -251,7 +251,7 @@ describe("handleGeneratePost", () => {
       label: "Starter Pack: 100 generations for $29, paid once",
     });
     expect(String(result.body.message)).toBe(
-      "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire."
+      "You've used your 5 free generations. Keep going with Starter: 100 more for $29, paid once. No subscription."
     );
     expect(String(result.body.message)).not.toContain(
       "Pack credits never expire."
@@ -273,7 +273,7 @@ describe("handleGeneratePost", () => {
     expect(result.status).toBe(401);
     expect(result.body.code).toBe("FREE_SAMPLE_PAUSED");
     expect(String(result.body.message)).toBe(
-      "Free samples are paused right now. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire."
+      "Free samples are paused right now. Try again later, or get Starter now: 100 generations for $29, paid once. No subscription."
     );
     expect(String(result.body.message)).not.toContain(
       "Pack credits never expire."

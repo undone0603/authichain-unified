@@ -13,6 +13,11 @@ test("root-app release is protected by exact-main quality and database attestati
     "node scripts/ci/autonomous-release-gate.mjs",
     "node scripts/ci/verify-dpp-release-env.mjs",
     "node scripts/ci/verify-dpp-main-quality.mjs",
+    "node scripts/ci/worker-release-receipt.mjs before",
+    "node scripts/ci/worker-release-receipt.mjs after",
+    "--outdir .release-receipt/bundle",
+    "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+    "if-no-files-found: error",
     "bash scripts/ci/verify-dpp-outbox-production.sh",
     'test "$EXPECTED_SHA" = "$DISPATCH_SHA"',
     "current main does not equal exact release SHA",
@@ -54,4 +59,13 @@ test("DPP schema gate validates current RPC-only outbox, target identity, and re
   assert.ok(!database.includes("to_regprocedure('public.claim_dpp_activation_email"), "obsolete claim RPC");
   assert.ok(!database.includes("supabase db push"));
   assert.ok(!database.includes("psql -f"));
+});
+
+test("artifact-storage failure stops before deploy mutation", () => {
+  const predeploy = workflow.indexOf("Confirm GitHub artifact upload works before Worker publish");
+  const deploy = workflow.indexOf("      - name: Publish authichain-app");
+  const receipt = workflow.indexOf("      - name: Publish same-run Worker bundle and SHA-256 release receipt");
+  assert.ok(predeploy >= 0 && deploy > predeploy && receipt > deploy, "artifact preflight must precede deploy and same-run receipt");
+  assert.ok(workflow.includes("path: .release-receipt/artifact-capacity-probe.txt"));
+  assert.ok(workflow.includes("retention-days: 1"));
 });

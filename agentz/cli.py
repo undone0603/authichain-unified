@@ -257,6 +257,30 @@ def cmd_tinyfish(args: argparse.Namespace) -> int:
     return cli_action(args.tinyfish_action, args.values, dry_run=args.dry_run)
 
 
+def cmd_capabilities(args: argparse.Namespace) -> int:
+    """List registry capabilities, discover the hosted MCP server, or call a read-only tool."""
+    from agentz.integrations.authichain_mcp import cli_capabilities
+
+    if args.capabilities_action == "prove-settlement":
+        from agentz.integrations.settlement_proof import cli_prove
+
+        return cli_prove(args.tx_hash)
+    if args.capabilities_action == "assess-action":
+        from agentz.core.agent_evidence import cli_assess
+
+        return cli_assess(args.action_file)
+    if args.capabilities_action == "revenue":
+        from agentz.integrations.x402_revenue import cli_revenue
+
+        return cli_revenue(args.days)
+    return cli_capabilities(
+        args.capabilities_action,
+        capability_id=getattr(args, "capability_id", None),
+        args_json=getattr(args, "args", None),
+        status=getattr(args, "status", None),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="agentz",
@@ -356,6 +380,33 @@ def build_parser() -> argparse.ArgumentParser:
             help="Validate and print the request; do not connect to TinyFish",
         )
 
+    cap = sub.add_parser(
+        "capabilities",
+        help="AgentZ capability registry and read-only hosted AuthiChain MCP calls",
+    )
+    cap_sub = cap.add_subparsers(dest="capabilities_action", required=True)
+    cap_list = cap_sub.add_parser("list", help="List registry entries (no network)")
+    cap_list.add_argument(
+        "--status",
+        choices=["AVAILABLE", "INTEGRATION_READY", "PARTIAL", "BLOCKED", "PROPOSED"],
+    )
+    cap_sub.add_parser("discover", help="List live hosted MCP tools and registry drift")
+    cap_sub.add_parser("agent-card", help="Fetch and check the public A2A agent card (read-only)")
+    cap_rev = cap_sub.add_parser(
+        "revenue", help="Count settled x402 USDC payments to payTo on Base (read-only)")
+    cap_rev.add_argument("--days", type=float, default=7.0)
+    cap_prove = cap_sub.add_parser(
+        "prove-settlement",
+        help="On-chain proof (receipt, keccak-checked logs) that an x402 payment settled")
+    cap_prove.add_argument("tx_hash")
+    cap_assess = cap_sub.add_parser(
+        "assess-action",
+        help="Agent Execution Evidence Gap Assessment for one redacted agent action (read-only)")
+    cap_assess.add_argument("action_file", help="JSON file: action_id, claimed{}, evidence{}")
+    cap_call = cap_sub.add_parser("call", help="Call one AVAILABLE read-only capability")
+    cap_call.add_argument("capability_id")
+    cap_call.add_argument("--args", default=None, help="JSON object of tool arguments")
+
     oc = sub.add_parser(
         "openclaw",
         help="Talk to the OpenClaw bridge (claw.authichain.com)",
@@ -416,6 +467,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_tinyfish(args)
     if args.command == "openclaw":
         return cmd_openclaw(args)
+    if args.command == "capabilities":
+        return cmd_capabilities(args)
 
     parser.print_help()
     return 1

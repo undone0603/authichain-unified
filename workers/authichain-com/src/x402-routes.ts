@@ -242,6 +242,8 @@ function hydrateX402(env?: X402Env) {
     "X402_USDC_ASSET",
     "X402_PRICE_USD",
     "X402_DAILY_CAP_USD",
+    "PAYAI_API_KEY_ID",
+    "PAYAI_API_KEY_SECRET",
   ];
   for (const name of keys) {
     const value = env[name];

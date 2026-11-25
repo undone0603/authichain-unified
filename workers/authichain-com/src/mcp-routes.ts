@@ -31,7 +31,11 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
-import { NEGOTIATE_TOOL, negotiateQuote, type X402RailTerms } from "./mcp-negotiate";
+import {
+  NEGOTIATE_TOOL,
+  negotiateQuote,
+  type X402RailTerms,
+} from "./mcp-negotiate";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -66,7 +70,12 @@ import {
   findPublishedPack,
   packUrl,
 } from "./published-packs";
-import { gatedCheckoutUrl, planById, planUsd } from "../../../src/lib/plans";
+import {
+  gatedCheckoutUrl,
+  planById,
+  planPaymentLink,
+  planUsd,
+} from "../../../src/lib/plans";
 
 /**
  * Protocol versions this endpoint can speak, newest first. `initialize`
@@ -116,6 +125,32 @@ const JSON_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
 };
+
+/**
+ * The one paid next step for an in-scope dpp_readiness_check, as data an agent
+ * can act on. nextStep stays free of prices and pitches; this separate field
+ * names the live plan from plans.ts with its own description (a workspace, not
+ * an audit, certification or legal advice). Out of scope: nothing to sell.
+ */
+export function dppPaidOption(inScope: boolean): {
+  paidOption?: Record<string, unknown>;
+} {
+  const plan = planById("dpp_readiness");
+  const checkout = planPaymentLink("dpp_readiness");
+  if (!inScope || !plan || !plan.listed || !checkout) return {};
+  return {
+    paidOption: {
+      plan: plan.id,
+      name: plan.name,
+      usd: planUsd("dpp_readiness"),
+      billing: "one_time",
+      checkout,
+      description: plan.description,
+      buyer: "human",
+      note: "Optional. A person completes the Stripe checkout; no agent payment is taken here.",
+    },
+  };
+}
 
 export const TOOLS = [
   {
@@ -611,7 +646,9 @@ function negotiateRailTerms(env?: X402Env): X402RailTerms | null {
     payTo: livePayTo(env),
     asset: BASE_USDC_ASSET,
     facilitator:
-      env?.X402_FACILITATOR_URL?.trim() || process.env.X402_FACILITATOR_URL?.trim() || null,
+      env?.X402_FACILITATOR_URL?.trim() ||
+      process.env.X402_FACILITATOR_URL?.trim() ||
+      null,
     resource: "https://authichain.com/api/x402",
   };
 }
@@ -631,7 +668,7 @@ function mcpTools(env?: X402Env) {
       return {
         ...tool,
         description:
-          "Free. Quotes without charging or authorizing payment the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness. One-time pack credits (Starter and Creator) never expire.",
+          "Free. Quotes without charging or authorizing payment the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness.",
       };
     }
     if (tool.name === "verify") {
@@ -651,7 +688,7 @@ function humanStripeCheckout() {
   return {
     status: "live" as const,
     rail: "stripe",
-    note: "One-time pack credits (Starter and Creator) never expire.",
+    note: "Starter and Creator include one-time pack credits.",
     starter: {
       usd: planUsd("starter"),
       generations: starter?.generations ?? 100,
@@ -845,6 +882,27 @@ type AuthSealLookup =
     };
 
 const SAFE_REGISTRY_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/;
+/**
+ * auth_seals.id and authichain_attestation_records.seal_id are uuid columns.
+ * PostgREST rejects a whole `or` filter with HTTP 400 when any uuid comparison
+ * gets a non-uuid value, so those terms are only added for uuid identifiers.
+ * Without this, every product id, GTIN, serial or lot lookup read as an outage.
+ */
+const UUID_IDENTIFIER =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** PostgREST `or` filter over `columns`, keeping uuid columns only for uuid ids. */
+export function registryOrFilter(
+  assetId: string,
+  columns: readonly string[],
+  uuidColumns: readonly string[]
+): string {
+  const isUuid = UUID_IDENTIFIER.test(assetId);
+  const terms = columns
+    .filter(column => isUuid || !uuidColumns.includes(column))
+    .map(column => `${column}.eq.${assetId}`);
+  return `(${terms.join(",")})`;
+}
 
 type PublicRegistryEnv = X402Env & {
   NEXT_PUBLIC_SUPABASE_URL?: string;
@@ -896,8 +954,12 @@ async function lookupAuthSeal(
   }
 
   const filters = [
-    `(id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},qr_payload.eq.${assetId})`,
-    `(id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId})`,
+    registryOrFilter(
+      assetId,
+      ["id", "product_id", "batch_id", "qr_payload"],
+      ["id"]
+    ),
+    registryOrFilter(assetId, ["id", "product_id", "batch_id"], ["id"]),
   ];
   try {
     for (const or of filters) {
@@ -1001,7 +1063,20 @@ async function lookupPublishedAttestation(
       "attestation_id,seal_id,product_id,batch_id,brand,object_id,product_class,gtin,serial,lot,issuer_id,issuer_kid,decision,payload,jws,record_hash,published_at",
     published: "eq.true",
     limit: "2",
-    or: `(attestation_id.eq.${assetId},seal_id.eq.${assetId},product_id.eq.${assetId},batch_id.eq.${assetId},object_id.eq.${assetId},gtin.eq.${assetId},serial.eq.${assetId},lot.eq.${assetId})`,
+    or: registryOrFilter(
+      assetId,
+      [
+        "attestation_id",
+        "seal_id",
+        "product_id",
+        "batch_id",
+        "object_id",
+        "gtin",
+        "serial",
+        "lot",
+      ],
+      ["seal_id"]
+    ),
   });
   try {
     const response = await fetch(
@@ -1588,7 +1663,10 @@ async function handleRpc(
     };
     const name = params.name ?? "";
     if (name === "negotiate") {
-      const quote = negotiateQuote(params.arguments ?? {}, negotiateRailTerms(env));
+      const quote = negotiateQuote(
+        params.arguments ?? {},
+        negotiateRailTerms(env)
+      );
       return rpcResult(id, {
         content: [{ type: "text", text: JSON.stringify(quote.body, null, 2) }],
         structuredContent: quote.body,
@@ -1686,7 +1764,15 @@ async function handleRpc(
         content: [
           {
             type: "text",
-            text: JSON.stringify({ ...result, web: DPP_CHECK_URL }, null, 2),
+            text: JSON.stringify(
+              {
+                ...result,
+                web: DPP_CHECK_URL,
+                ...dppPaidOption(result.inScope),
+              },
+              null,
+              2
+            ),
           },
         ],
       });

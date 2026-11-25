@@ -45,7 +45,7 @@
 | Step                | Result                                                                                                                 |
 | :------------------ | :--------------------------------------------------------------------------------------------------------------------- |
 | 1 Env / credentials | No cloud LLM keys in `.env` / `.env.local`. Only `LOCAL_MODEL_URL=http://localhost:11434` + `LOCAL_MODEL_ID=gemma2:2b` |
-| 2 Network           | Ollama up; LM Studio `192.168.254.10:1234` down                                                                        |
+| 2 Network           | Ollama up; LM Studio `<lan-host>:1234` down                                                                        |
 | 3 Isolation         | Minimal “Hello world” succeeds after fix                                                                               |
 
 **Root cause:** `_local_base_url()` omitted `/v1`, so ChatOpenAI called `/chat/completions` (404) instead of `/v1/chat/completions` (200 on Ollama).

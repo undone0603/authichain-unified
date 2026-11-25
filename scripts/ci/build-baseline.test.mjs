@@ -49,6 +49,14 @@ test("the committed baseline skips a worker-only change and rejects overlap", ()
   assert.equal(decide(["package.json"], baseline.skipRoots).skip, false);
 });
 
+test("AgentZ Python and Supabase SQL changes skip the Next build", () => {
+  const roots = loadBaseline().skipRoots;
+  assert.equal(decide(["agentz/core/contract_gate.py", "agentz/tests/test_contract_gate.py"], roots).skip, true);
+  assert.equal(decide(["supabase/migrations/20261014195349_ai_adapt_heartbeat.sql"], roots).skip, true);
+  // Mixed with a Next input, the build still runs.
+  assert.equal(decide(["agentz/core/contract_gate.py", "src/lib/plans.ts"], roots).skip, false);
+});
+
 test("a scripts/__tests__ wait_buyer lock does not force the Next production build", () => {
   assert.equal(isTestOnlyPath("scripts/__tests__/revenue-operator.test.ts"), true);
   const decision = decide(

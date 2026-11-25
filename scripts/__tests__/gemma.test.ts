@@ -38,7 +38,7 @@ function fakeFetch(status: number, payload: unknown) {
 
 describe("gemma client", () => {
   it("defaults to the owner's LM Studio and trims a trailing slash", () => {
-    expect(config({}).url).toBe("http://192.168.254.10:1234");
+    expect(config({}).url).toBe("http://127.0.0.1:1234");
     expect(config({}).model).toBe("google/gemma-4-e4b");
     expect(config({ LOCAL_LLM_URL: "http://x:1/" }).url).toBe("http://x:1");
     expect(config({ GEMMA_DRY_RUN: "true" }).dry).toBe(true);

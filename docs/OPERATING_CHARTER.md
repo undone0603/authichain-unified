@@ -221,7 +221,7 @@ below. Every other item falls back to something that already exists.
 ## Gemma (local model)
 
 Gemma runs in LM Studio on the owner's network (default
-`http://192.168.254.10:1234`, model `google/gemma-4-e4b`). `gemma-loops.yml`
+`http://<lan-host>:1234`, model `google/gemma-4-e4b`). `gemma-loops.yml`
 runs three jobs on a self-hosted runner labelled `lan-gemma`:
 
 - **Copy review**, daily: reads the live pricing and landing pages and keeps

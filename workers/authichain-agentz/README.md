@@ -16,7 +16,7 @@ This host does **not** set `OPENCLAW_GATEWAY_URL`. That stays an owner-set reach
 
 ## Image
 
-`workers/authichain-agentz/Dockerfile` follows repo-root `Dockerfile.agentz` (`python:3.12-slim`, `requirements-agentz.txt`, repo-root build context) but is the **API** image: `EXPOSE 8000` and `CMD uvicorn agentz.api.main:app --host 0.0.0.0 --port 8000`.
+`workers/authichain-agentz/Dockerfile` follows repo-root `Dockerfile.agentz` (`python:3.12-slim`, `requirements-agentz.txt`, repo-root build context) but is the **API** image: `EXPOSE 8000` and `CMD uvicorn agentz.api.main:app --host 0.0.0.0 --port 8000`. It installs Playwright Chromium at build time and runs as non-root `agentz`. Sandbox and `/dev/shm` plan: `BROWSER_RUNTIME.md`.
 
 `Dockerfile.agentz` / `docker-compose.yml` `agentz` stay the CLI (`python3 -m agentz.cli`). Do not change that CMD.
 

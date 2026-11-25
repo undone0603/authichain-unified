@@ -1,0 +1,98 @@
+name: AgentZ protected host executable comparison (no deployment)
+
+# Manual-only protected main; never run PR-sourced code on the persistent runner.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agentz-read-only-executable-identity
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: [self-hosted, Linux, ARM64, authichain-ops]
+    timeout-minutes: 25
+    steps:
+      - name: Checkout protected exact SHA without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Confirm pinned protected workflow and actual host
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(hostname)" = LAPTOP-72MAGTL2
+          test "$(uname -m)" = aarch64
+          test -x /usr/bin/sudo
+          sudo -n id -u | grep -qx '0'
+          python3 -B -c 'import ast,sys; ast.parse(open(sys.argv[1]).read())' scripts/ops/agentz_live_executable_probe.py
+          echo 'PROBE_SOURCE_SHA256='"$(sha256sum scripts/ops/agentz_live_executable_probe.py | cut -d ' ' -f 1)"
+      - name: Hash existing runner isolation marker (no content disclosure)
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="$HOME/.config/authichain/runner-isolation-attested"
+          test -f "$f" && test ! -L "$f"
+          test "$(wc -c < "$f")" -eq 237
+          printf 'ISOLATION_MARKER_SHA256=%s\n' "$(sha256sum "$f" | cut -d ' ' -f 1)"
+          stat -c 'ISOLATION_MARKER_METADATA=size:%s uid:%u gid:%g mode:%a modified:%y' "$f"
+          echo 'ISOLATION_MARKER_CONTENT_REVIEW=NOT_PERFORMED; hash is not independent isolation proof'
+      - name: Observe origin executable without accepting missing release evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This first probe intentionally returns HOLD when no protected image receipt
+          # is provided. Keep its output so process identity is observable even when
+          # the following release download is unavailable.
+          if sudo -n env -i PATH=/usr/bin:/bin /usr/bin/python3 -B scripts/ops/agentz_live_executable_probe.py --port 8000; then
+            echo 'Unexpected evidence-only probe success without archive inputs'
+            exit 1
+          else
+            echo 'BASELINE=UNATTESTED_READ_ONLY_OBSERVATION'
+          fi
+      - name: Download pinned protected draft release and compare live image
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Conserve the WSL runner's free-space reserve. Only new temp files
+          # are created; no service, Docker process, repo state or secrets altered.
+          free_kib="$(df -Pk "$RUNNER_TEMP" | awk 'NR==2 {print $4}')"
+          test "$free_kib" -ge 6291456 || { echo 'HOLD: under 6 GiB free'; exit 1; }
+          tmp="$(mktemp -d "$RUNNER_TEMP/agentz-host-identity.XXXXXXXX")"
+          chmod 700 "$tmp"
+          trap 'rm -rf -- "$tmp"' EXIT
+          release_id=454260281
+          source_sha=b4afbb3fc7a44dee4f7b2b2b1b8f58a9e4dcc883
+          pinned_archive_sha=7f012f34b0a73a8a386b5b6f6282b17d782217253c63dd38a2bda382f7602218
+          pinned_receipt_sha=76bc8fd646efc5a0617c7da8180de7b0ac8d7cec61ce6e2677e32438274a8718
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id")"
+          jq -e --arg sha "$source_sha" --arg a "sha256:$pinned_archive_sha" --arg r "sha256:$pinned_receipt_sha" '
+            .draft == true and .published_at == null and .target_commitish == $sha and
+            .tag_name == "agentz-evidence-44994872276-1" and
+            ([.assets[] | select(.id == 778171072 and .name == "agentz-linux-arm64.tar.gz" and .digest == $a and .size == 1093178892 and .state == "uploaded")] | length == 1) and
+            ([.assets[] | select(.id == 778171070 and .name == "release.json" and .digest == $r and .size == 504 and .state == "uploaded")] | length == 1)
+          ' <<< "$release" >/dev/null
+          gh api -H 'Accept: application/octet-stream' "repos/$GITHUB_REPOSITORY/releases/assets/778171072" > "$tmp/agentz-linux-arm64.tar.gz"
+          gh api -H 'Accept: application/octet-stream' "repos/$GITHUB_REPOSITORY/releases/assets/778171070" > "$tmp/release.json"
+          test "$(wc -c < "$tmp/agentz-linux-arm64.tar.gz")" -eq 1093178892
+          test "$(wc -c < "$tmp/release.json")" -eq 504
+          printf '%s  %s\n' "$pinned_archive_sha" "$tmp/agentz-linux-arm64.tar.gz" | sha256sum --check
+          printf '%s  %s\n' "$pinned_receipt_sha" "$tmp/release.json" | sha256sum --check
+          jq -e --arg sha "$source_sha" --arg a "$pinned_archive_sha" '
+            .source_sha == $sha and .sha256 == $a
+          ' "$tmp/release.json" >/dev/null
+          # Drop GitHub token and any other credentials before root-only host probe.
+          sudo -n env -i PATH=/usr/bin:/bin /usr/bin/python3 -B \
+            scripts/ops/agentz_live_executable_probe.py --port 8000 \
+            --archive "$tmp/agentz-linux-arm64.tar.gz" \
+            --release-json "$tmp/release.json" \
+            --github-receipt-sha256 "$pinned_receipt_sha"
