@@ -12,8 +12,9 @@ const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
 const BANNED = [
   /50 workspace generations?/i,
   /Pack credits never expire\./,
-  /never[- ]expire/i,
+  /never[- ]expir(?:e|es|ing)\b/i,
   /no[- ]expiry/i,
+  /\b(?:don['’]?t|do not|won['’]?t|will not)\s+expire\b/i,
 ];
 
 const MONEY_SOURCES = [
@@ -37,6 +38,8 @@ const MONEY_SOURCES = [
   "workers/authichain-com/src/desk.ts",
   "workers/authichain-com/src/legal-pages.ts",
   "workers/authichain-com/content/docs/public/dpp-architecture.md",
+  "workers/_shared/estate-pricing.ts",
+  "workers/qron-space/src/index.ts",
 ];
 
 describe("CFA-758 money-route copy", () => {
