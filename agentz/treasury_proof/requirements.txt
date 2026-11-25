@@ -1,0 +1,3 @@
+# Isolated signer environment, not the FastAPI or AgentZ operator environment.
+cryptography>=42,<47
+# System dependency: OpenSSL CLI 3.x with -KECCAK-256; fail closed if missing.
