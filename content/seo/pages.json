@@ -5903,6 +5903,198 @@
     }
   },
   {
+    "slug": "dscsa-small-dispenser-exemption-extended-to-november-2027",
+    "keyword": "dscsa small dispenser exemption extended to november 2027",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "DSCSA Small Dispenser Exemption to Nov 2027 | AuthiChain",
+    "metaDescription": "Small dispensers have until 27 November 2027 for DSCSA’s enhanced requirements; eligibility is set by headcount on 27 November 2026.",
+    "h1": "DSCSA Small Dispenser Exemption Extended To November 2027",
+    "bodyHtml": "<p>FDA’s August 2026 exemption moves the date small dispensers must meet DSCSA’s enhanced drug distribution security requirements to 27 November 2027, and eligibility is fixed by headcount on 27 November 2026: 25 or fewer full-time pharmacists and pharmacy technicians, counted across every pharmacy under the same corporate owner.</p><h2>Why AuthiChain</h2><ul><li>Qualifying pharmacies make and document the determination themselves; FDA does not require an individual application, so the record of your 27 November 2026 headcount is the evidence an inspector asks for</li><li>The exemption covers the enhanced electronic, interoperable requirements only; existing DSCSA duties such as verifying suspect product and accepting product only from authorized trading partners stay in force</li><li>Records signed under protocol/SPEC.md verify offline with the Apache-2.0 reference verifier, which has no dependencies and needs no account, so a pharmacy can test what a partner sends before the enhanced requirements apply</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Is 27 November 2026 still a DSCSA deadline for small pharmacies?</h3><p>It is now the eligibility date, not the compliance date. Under the August 2026 exemption, a dispenser that has 25 or fewer full-time pharmacists and technicians across its corporate ownership on that day is exempt from the enhanced requirements until 27 November 2027. Confirm the current dates on FDA’s DSCSA exemptions page.</p><h3>Does a signed record satisfy DSCSA on its own?</h3><p>No. DSCSA specifies EPCIS-based data exchange between authorized trading partners. A signature proves who issued a record and that it is unchanged since; it does not prove the statements in it are true, and it does not replace the exchange your trading partners require.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — DSCSA Small Dispenser Exemption Extended To November 2027",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "FDA’s August 2026 exemption moves the date small dispensers must meet DSCSA’s enhanced drug distribution security requirements to 27 November 2027, and eligibility is fixed by headcount on 27 November 2026: 25 or fewer full-time pharmacists and pharmacy technicians, counted across every pharmacy under the same corporate owner.",
+          "url": "https://authichain.com/p/dscsa-small-dispenser-exemption-extended-to-november-2027"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSCSA Small Dispenser Exemption Extended To November 2027",
+              "item": "https://authichain.com/p/dscsa-small-dispenser-exemption-extended-to-november-2027"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is 27 November 2026 still a DSCSA deadline for small pharmacies?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "It is now the eligibility date, not the compliance date. Under the August 2026 exemption, a dispenser that has 25 or fewer full-time pharmacists and technicians across its corporate ownership on that day is exempt from the enhanced requirements until 27 November 2027. Confirm the current dates on FDA’s DSCSA exemptions page."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does a signed record satisfy DSCSA on its own?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. DSCSA specifies EPCIS-based data exchange between authorized trading partners. A signature proves who issued a record and that it is unchanged since; it does not prove the statements in it are true, and it does not replace the exchange your trading partners require."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "eu-battery-passport-71-data-points-guidance",
+    "keyword": "eu battery passport 71 data points guidance",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "EU Battery Passport Guidance: 71 Data Points | AuthiChain",
+    "metaDescription": "Commission guidance tags 71 battery passport data points per category as mandatory, optional, conditional or not filled for 18 February 2027.",
+    "h1": "EU Battery Passport 71 Data Points Guidance",
+    "bodyHtml": "<p>The European Commission’s Digital Batteries Passport guidance, announced on 21 August 2026, lists 71 data points and tags each one, per battery category, as mandatory, optional, applicable only in certain cases, or not to be filled or displayed as of 18 February 2027.</p><h2>Why AuthiChain</h2><ul><li>It covers electric vehicle batteries, light means of transport batteries and industrial batteries above 2 kWh, and is read together with Regulation (EU) 2023/1542 and its delegated and implementing acts, not instead of them</li><li>The tags turn the passport into a per-category field list: a gap assessment starts by marking which mandatory points for your category you hold today and which only your cell or pack supplier can provide</li><li>Every passport record carries a GS1 Digital Link identifier and an Ed25519 signature that any party can check offline with the Apache-2.0 reference verifier, which needs no account; the signature proves who issued the data, not that the data is correct</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><p>Want to see a fictional walkthrough first? <a href=\"https://authichain.com/battery-passport/sample-audit\">Read the fictional e-bike walkthrough</a>.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>Do all 71 data points apply to my battery?</h3><p>No. Applicability is set per category, and some points are marked as not to be filled or displayed on 18 February 2027. Read the column for your category in the Commission guidance, and treat third-party counts of mandatory fields as a starting point to check against the PDF.</p><h3>Is the guidance legally binding?</h3><p>No. It is Commission guidance to support implementation. The obligations come from Regulation (EU) 2023/1542 and the acts adopted under it, and where they differ the regulation governs.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — EU Battery Passport 71 Data Points Guidance",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The European Commission’s Digital Batteries Passport guidance, announced on 21 August 2026, lists 71 data points and tags each one, per battery category, as mandatory, optional, applicable only in certain cases, or not to be filled or displayed as of 18 February 2027.",
+          "url": "https://authichain.com/p/eu-battery-passport-71-data-points-guidance"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "EU Battery Passport 71 Data Points Guidance",
+              "item": "https://authichain.com/p/eu-battery-passport-71-data-points-guidance"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Do all 71 data points apply to my battery?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Applicability is set per category, and some points are marked as not to be filled or displayed on 18 February 2027. Read the column for your category in the Commission guidance, and treat third-party counts of mandatory fields as a starting point to check against the PDF."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is the guidance legally binding?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. It is Commission guidance to support implementation. The obligations come from Regulation (EU) 2023/1542 and the acts adopted under it, and where they differ the regulation governs."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "slug": "textile-digital-product-passport-data-requirements-jrc-study",
+    "keyword": "textile digital product passport data requirements jrc study",
+    "brand": "AuthiChain",
+    "domain": "authichain.com",
+    "title": "Textile DPP Data Requirements: JRC Study | AuthiChain",
+    "metaDescription": "The JRC textile study proposes public fibre composition, robustness and care data; the textile delegated act is planned for Q4 2027.",
+    "h1": "Textile Digital Product Passport Data Requirements Jrc Study",
+    "bodyHtml": "<p>The JRC study on DPP content for textile apparel, dated 15 May 2026, proposes a public tier of product and producer identification, fibre composition, a robustness score and care instructions, with substance-of-concern locations and footprint data reserved for parties with a legitimate interest such as recyclers; the Commission plans to adopt the textile delegated act in Q4 2027.</p><h2>Why AuthiChain</h2><ul><li>The proposed scope is apparel with at least 80% textile fibre by weight; yarns, fabrics and other intermediate products, smart textiles, PPE, medical devices and toys are outside it</li><li>A preparatory study is input to the delegated act, not the act itself, so the fields to build against are the ones the adopted text and the harmonised DPP standards set</li><li>A garment record follows the W3C Verifiable Credentials Data Model 2.0 structure over a GS1 Digital Link identifier, and the 28-fixture adversarial conformance suite lets you test any implementation of the open specification, including ours</li></ul><h2>How it works</h2><p>Issue a unique identifier per unit and link it to a signed record. EU DPP Readiness is $299 one-time.</p><h2>Get started</h2><p>Not sure what applies to you? <a href=\"https://authichain.com/dpp-check\">Take the free DPP readiness check</a> first.</p><form class=\"checkout-email-form\" action=\"https://authichain.com/checkout/dpp_readiness\" method=\"post\"><label class=\"checkout-email-label\" for=\"checkout-email\">Work email<input id=\"checkout-email\" name=\"email\" type=\"email\" required maxlength=\"254\" autocomplete=\"email\" inputmode=\"email\" placeholder=\"you@company.com\"></label><p class=\"checkout-email-hint\">We use this for your receipt and to follow up if checkout doesn't finish. No newsletter.</p><button class=\"btn btn-primary\" type=\"submit\">Start DPP readiness checkout</button></form><p><a href=\"https://authichain.com/checkout/dpp_readiness\">Pay $299 on Stripe</a></p><p><a href=\"https://authichain.com/pricing\">View AuthiChain pricing</a>. EU DPP Readiness is $299 one-time.</p><h2>FAQ</h2><h3>When do textile digital product passports become mandatory?</h3><p>Not before the delegated act is adopted, which the Commission plans for Q4 2027, followed by the transition period that act sets. Until then the JRC study shows the likely direction, not a binding field list.</p><h3>Who sees which textile passport data?</h3><p>In the study’s proposal, consumers see identification, fibre composition, the robustness score and care instructions, while more detailed data such as where substances of concern sit in the garment goes to parties with a legitimate interest. The adopted act decides the final split.</p>",
+    "jsonLd": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "name": "AuthiChain — Textile Digital Product Passport Data Requirements Jrc Study",
+          "provider": {
+            "@type": "Organization",
+            "name": "AuthiChain",
+            "url": "https://authichain.com"
+          },
+          "description": "The JRC study on DPP content for textile apparel, dated 15 May 2026, proposes a public tier of product and producer identification, fibre composition, a robustness score and care instructions, with substance-of-concern locations and footprint data reserved for parties with a legitimate interest such as recyclers; the Commission plans to adopt the textile delegated act in Q4 2027.",
+          "url": "https://authichain.com/p/textile-digital-product-passport-data-requirements-jrc-study"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "AuthiChain",
+              "item": "https://authichain.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Textile Digital Product Passport Data Requirements Jrc Study",
+              "item": "https://authichain.com/p/textile-digital-product-passport-data-requirements-jrc-study"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "When do textile digital product passports become mandatory?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not before the delegated act is adopted, which the Commission plans for Q4 2027, followed by the transition period that act sets. Until then the JRC study shows the likely direction, not a binding field list."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who sees which textile passport data?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "In the study’s proposal, consumers see identification, fibre composition, the robustness score and care instructions, while more detailed data such as where substances of concern sit in the garment goes to parties with a legitimate interest. The adopted act decides the final split."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     "slug": "blockchain-qr-code-for-cannabis",
     "keyword": "blockchain qr code for cannabis",
     "brand": "StrainChain",
