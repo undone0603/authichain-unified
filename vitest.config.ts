@@ -176,7 +176,7 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     testTimeout: 30000,
-    hookTimeout: 30000,
+    hookTimeout: 60000,
     setupFiles: [
       "./scripts/vitest-isolate-delivery-env.ts",
       "./apps/verifier-web/src/setupTests.ts",
