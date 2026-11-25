@@ -184,5 +184,5 @@ wcwidth==0.8.1
 web3==7.16.0
 websockets==15.0.1
 xxhash==3.7.0
-yarl==1.24.2
+yarl==1.25.1
 zstandard==0.25.0
