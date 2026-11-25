@@ -14,16 +14,18 @@
 #   isobrowser-net      docker --internal network, 172.31.250.0/24, inhibit_ipv4 so the HOST has
 #                       no address on it: nothing on it can reach host services.
 #   isobrowser-chrome   chromedp/headless-shell, ONLY on isobrowser-net (.10), CDP :9222
-#   isobrowser-egress   squid on isobrowser-net (.2) + default bridge; the only way out.
+#   isobrowser-egress   squid on isobrowser-net (.2) + isobrowser-edge; the only way out.
 #                       Refuses private/loopback/link-local/CGNAT/metadata destinations
 #                       after DNS resolution, so redirects and DNS rebinding hit the same ACL.
-#   isobrowser-relay    alpine/socat on bridge (published 127.0.0.1:9222 only) + isobrowser-net (.5);
+#   isobrowser-relay    alpine/socat on isobrowser-edge (published 127.0.0.1:9222 only) + isobrowser-net (.5);
+#                       Chrome is recycled daily by `ensure` so cookies/storage don't persist across days.
 #                       forwards host -> chrome CDP. It only ever dials the browser.
 # AgentZ (host network) uses CDP at http://127.0.0.1:9222 and sets
 # AGENTZ_BROWSER_NETWORK_ISOLATED=true only because of this layout.
 set -euo pipefail
 
 NET=isobrowser-net
+EDGE=isobrowser-edge   # own bridge for relay + egress: other containers (e.g. runner postgres) can't reach CDP
 SUBNET=172.31.250.0/24
 PROXY_IP=172.31.250.2
 RELAY_IP=172.31.250.5
@@ -77,6 +79,7 @@ up() {
     docker network create --internal --subnet "$SUBNET" \
       -o com.docker.network.bridge.inhibit_ipv4=true "$NET" >/dev/null
   fi
+  docker network inspect "$EDGE" >/dev/null 2>&1 || docker network create "$EDGE" >/dev/null
 
   docker create --name isobrowser-egress --restart unless-stopped \
     --network "$NET" --ip "$PROXY_IP" \
@@ -84,7 +87,7 @@ up() {
     --memory 256m --pids-limit 256 \
     -v "$CONF_DIR/squid.conf:/etc/squid/squid.conf:ro" \
     "$PROXY_IMAGE" >/dev/null
-  docker network connect bridge isobrowser-egress
+  docker network connect "$EDGE" isobrowser-egress
   docker start isobrowser-egress >/dev/null
 
   docker run -d --name isobrowser-chrome --restart unless-stopped \
@@ -100,7 +103,7 @@ up() {
     --disable-background-networking --no-first-run --mute-audio >/dev/null
 
   docker create --name isobrowser-relay --restart unless-stopped \
-    --network bridge -p "$CDP_HOST_PORT:9222" \
+    --network "$EDGE" -p "$CDP_HOST_PORT:9222" \
     --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges --read-only \
     --memory 64m --pids-limit 128 \
     "$RELAY_IMAGE" TCP-LISTEN:9222,fork,reuseaddr "TCP:$BROWSER_IP:9222" >/dev/null
@@ -146,6 +149,10 @@ direct() { # host:port -> direct (non-proxied) egress from the isolated network 
 test_iso() {
   local fail=0 r t u
   r=$(probe https://example.com); echo "public  https://example.com (CONNECT) -> $r"; [[ "$r" == 200 ]] || fail=1
+  # relay must not be reachable from the default bridge (where other containers live)
+  local rip; rip=$(docker inspect -f "{{(index .NetworkSettings.Networks \"$EDGE\").IPAddress}}" isobrowser-relay)
+  r=$(docker run --rm --network bridge --cap-drop ALL "$PROBE_IMAGE" -T5 /dev/null "TCP:$rip:9222,connect-timeout=5" >/dev/null 2>&1 && echo OPEN || echo blocked)
+  echo "bridge  -> relay $rip:9222 -> $r"; [[ "$r" == blocked ]] || fail=1
   for t in 1.1.1.1:443 172.31.250.1:3000 172.31.250.1:8000 172.17.0.1:3000 172.17.0.1:8000 "$RELAY_IP:3128"; do
     r=$(direct "$t"); echo "direct  $t (no proxy) -> $r"; [[ "$r" == blocked ]] || fail=1
   done
@@ -170,6 +177,12 @@ install_agentz() {
 
 ensure() {
   cdp_ok || up
+  # Daily recycle: fresh profile (cookies, storage, cache) at most 24h old.
+  local started
+  started=$(docker inspect -f '{{.State.StartedAt}}' isobrowser-chrome 2>/dev/null | cut -c1-19)
+  if [ -n "$started" ] && [ $(( $(date -u +%s) - $(date -u -d "$started" +%s) )) -gt 86400 ]; then
+    docker restart isobrowser-chrome >/dev/null && echo "recycled isobrowser-chrome"
+  fi
   if docker ps --format '{{.Names}}' | grep -qx authichain-agentz && \
      ! docker exec authichain-agentz test -x /opt/agentz-browser/agentz-browser; then
     install_agentz
