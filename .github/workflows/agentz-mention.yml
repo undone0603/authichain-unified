@@ -48,12 +48,14 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
+      # Cosmetic 👀 reaction; the only step allowed to fail (the reply below must not).
       - name: Acknowledge
+        continue-on-error: true
         run: |
           if [ "$EVENT_NAME" = pull_request_review_comment ]; then
-            gh api -X POST "repos/$GH_REPO/pulls/comments/$COMMENT_ID/reactions" -f content=eyes >/dev/null || true
+            gh api -X POST "repos/$GH_REPO/pulls/comments/$COMMENT_ID/reactions" -f content=eyes >/dev/null
           else
-            gh api -X POST "repos/$GH_REPO/issues/comments/$COMMENT_ID/reactions" -f content=eyes >/dev/null || true
+            gh api -X POST "repos/$GH_REPO/issues/comments/$COMMENT_ID/reactions" -f content=eyes >/dev/null
           fi
 
       - name: Run command
