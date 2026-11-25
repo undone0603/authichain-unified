@@ -58,7 +58,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           context="$(mktemp -d)"
           image="agentz-host:$GITHUB_SHA"
-          git archive "$GITHUB_SHA" agentz requirements-agentz.txt workers/authichain-agentz/Dockerfile |
+          git archive "$GITHUB_SHA" agentz requirements-agentz.txt workers/authichain-agentz/Dockerfile \
+            workers/authichain-com/src/bot-identities.ts |
             tar -x -C "$context"
           docker build --platform linux/arm64 --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --tag "$image" --file "$context/workers/authichain-agentz/Dockerfile" "$context"
@@ -77,6 +78,23 @@ jobs:
             --retry-delay 2 --max-time 5 "http://$address/health" > "$RUNNER_TEMP/agentz-health.json"
           python3 -c 'import json, sys; assert isinstance(json.load(open(sys.argv[1])), dict)' \
             "$RUNNER_TEMP/agentz-health.json"
+          curl --fail --silent --show-error --retry 15 --retry-all-errors \
+            --retry-delay 2 --max-time 5 "http://$address/identity" > "$RUNNER_TEMP/agentz-identity.json"
+          python3 - "$context/workers/authichain-com/src/bot-identities.ts" "$RUNNER_TEMP/agentz-identity.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          src = Path(sys.argv[1]).read_text(encoding="utf-8")
+          roster = json.loads(src[src.index("=") + 1:src.rindex(";")])
+          bot, = [b for b in roster["bots"] if b["slug"] == "agentz"]
+          identity = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+          assert identity["agent_id"] == "agent:authichain:agentz"
+          assert identity["did"] == bot["did"]
+          assert identity["did_key"] == bot["didKey"]
+          assert identity["valid_until"] == bot["record"]["validUntil"]
+          assert identity["expired"] is False
+          assert identity["key_possession"]["status"] == "unproven"
+          assert identity["can_sign_as_self"] is False
+          PY
           mkdir -p "$RUNNER_TEMP/agentz-release"
           docker save "$image" | gzip -n > "$RUNNER_TEMP/agentz-release/agentz-linux-arm64.tar.gz"
           image_bytes="$(docker image inspect --format '{{.Size}}' "$image")"

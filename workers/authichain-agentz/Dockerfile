@@ -2,7 +2,7 @@
 # Follows repo-root Dockerfile.agentz (python:3.12-slim, requirements-agentz.txt)
 # but CMD is uvicorn — the compose CLI image stays python3 -m agentz.cli.
 # Build context is the monorepo root (wrangler.jsonc image_build_context) or the
-# sparse host-artifact archive (agentz/ + requirements-agentz.txt).
+# sparse host-artifact archive (AgentZ sources, requirements and public roster).
 #
 # Browser runtime: Playwright Python is pinned in requirements-agentz.txt
 # (playwright==1.60.0). This image installs that package's Chromium only
@@ -64,6 +64,8 @@ RUN useradd --create-home --uid ${AGENTZ_UID} --shell /usr/sbin/nologin agentz \
 WORKDIR /app
 COPY --chown=agentz:agentz requirements-agentz.txt .
 COPY --chown=agentz:agentz agentz ./agentz
+# Public verification roster only; no signing keys or other Worker files.
+COPY workers/authichain-com/src/bot-identities.ts /app/workers/authichain-com/src/bot-identities.ts
 
 # Runtime-written dirs: group 0 + g=u so any uid in group 0 can write
 # (`docker run --user <host-uid> --group-add 0`). Not world-writable.
