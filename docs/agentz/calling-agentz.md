@@ -9,12 +9,14 @@ and in WSL (`~/bin/agentz`). It talks to the local AgentZ API on `127.0.0.1:8000
 ```
 agentz status                      service, identity, isolated browser, workflow count
 agentz browse https://example.com  read a public page through the isolated browser
+agentz research "<question>" -n 5   TinyFish search + read top results via the isolated browser
+                                   -> cited note in ~/.local/share/agentz/research/ (no summarizing)
 agentz workflows launch_           list workflow ids (filtered)
 agentz run launch_score_prospects  dry-run a workflow (k=v args become JSON parameters)
 agentz run <id> --live             live run; asks you to type the id to confirm
 agentz results | agents | launch | score | control | identity
 agentz api GET /launch/state       raw authenticated call
-agentz cli list                    python -m agentz.cli inside the container
+agentz cli list                    python -m agentz.cli inside the container (with AgentZ's env loaded)
 agentz browser status|test|up|down manage the isolated browser host
 ```
 

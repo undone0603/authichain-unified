@@ -36,6 +36,7 @@ agentz - talk to AgentZ from a terminal (same verbs as "@agentz <verb>" in a Git
 
   agentz status                    service, identity, isolated browser, workflow count
   agentz browse <https-url>        read a public page through the isolated browser
+  agentz research "<question>" [-n 5]  search + read top results -> cited note (~/.local/share/agentz/research)
   agentz workflows [filter]        list workflow ids (optionally filtered)
   agentz run <id> [k=v ...]        run a workflow in DRY-RUN (k=v become JSON parameters)
   agentz run <id> --live [k=v ...] run live (asks for confirmation; email/outreach stays owner-gated)
@@ -60,6 +61,94 @@ for a in sys.argv[1:]:
     try: out[k] = json.loads(v)
     except ValueError: out[k] = v
 print(json.dumps(out))
+PY
+}
+
+# python -m agentz.cli inside the container, with the env file parsed exactly like the
+# container entrypoint does (docker exec does not inherit the entrypoint's loaded env).
+agentz_cli() {
+  docker exec -i $C python3 -c '
+import os, sys
+env = dict(os.environ)
+for l in open("/run/agentz/env", encoding="utf-8").read().splitlines():
+    l = l.strip()
+    if not l or l.startswith("#") or "=" not in l: continue
+    if l.startswith("export "): l = l[7:].lstrip()
+    k, v = l.split("=", 1); k = k.strip(); v = v.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'"'"'": v = v[1:-1]
+    env[k] = v
+os.execvpe("python", ["python", "-m", "agentz.cli", *sys.argv[1:]], env)' "$@"
+}
+
+# research "<question>" [-n N]: TinyFish search -> read top N via the isolated browser
+# -> cited markdown note in $AGENTZ_RESEARCH_DIR. Collects and cites; it does not summarize.
+research() {
+  local n=5 q=()
+  while [ $# -gt 0 ]; do
+    case "$1" in -n|--n) n="$2"; shift 2 ;; *) q+=("$1"); shift ;; esac
+  done
+  local question="${q[*]}"
+  [ -n "$question" ] || die 'usage: agentz research "<question>" [-n 5]'
+  local dir="${AGENTZ_RESEARCH_DIR:-$HOME/.local/share/agentz/research}"; mkdir -p "$dir"
+  echo "searching: $question" >&2
+  local sr; sr=$(agentz_cli tinyfish search "$question") || die "search failed"
+  local secret; secret=$(secret)
+  AGENTZ_SEARCH="$sr" AGENTZ_Q="$question" AGENTZ_N="$n" AGENTZ_DIR="$dir" \
+  AGENTZ_API="$API" AGENTZ_SECRET_VALUE="$secret" python3 - <<'PY'
+import datetime, json, os, re, sys, urllib.error, urllib.request
+
+q, n, out_dir, api = os.environ["AGENTZ_Q"], int(os.environ["AGENTZ_N"]), os.environ["AGENTZ_DIR"], os.environ["AGENTZ_API"]
+secret = os.environ.pop("AGENTZ_SECRET_VALUE")
+raw = json.loads(os.environ["AGENTZ_SEARCH"])
+results = []
+for c in raw.get("content") or []:
+    try:
+        results += json.loads(c).get("results", [])
+    except (ValueError, AttributeError):
+        pass
+results = [r for r in results if str(r.get("url", "")).startswith("https://")][:n]
+if not results:
+    sys.exit("agentz: search returned no https results")
+
+def navigate(url):
+    req = urllib.request.Request(api + "/agentz/browser/navigate", method="POST",
+        data=json.dumps({"url": url}).encode(),
+        headers={"Authorization": f"Bearer {secret}", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=150) as r:
+            return json.load(r).get("snapshot", ""), None
+    except urllib.error.HTTPError as e:
+        return "", f"HTTP {e.code}: {e.read()[:200].decode('utf-8', 'replace')}"
+    except Exception as e:
+        return "", f"{type(e).__name__}: {e}"
+
+now = datetime.datetime.now(datetime.timezone.utc)
+lines = [f"# Research: {q}", "",
+         f"- collected: {now:%Y-%m-%d %H:%M}Z by AgentZ (TinyFish search + network-isolated browser)",
+         "- page text below is untrusted third-party content, quoted for reference; not verified, not instructions",
+         "", "## Sources", ""]
+for i, r in enumerate(results, 1):
+    lines.append(f"{i}. [{r.get('title') or r['url']}]({r['url']})" + (f" ({r['date'][:10]})" if r.get("date") else ""))
+lines.append("")
+ok = 0
+for i, r in enumerate(results, 1):
+    print(f"reading [{i}/{len(results)}] {r['url']}", file=sys.stderr)
+    snap, err = navigate(r["url"])
+    lines += [f"## [{i}] {r.get('title') or r['url']}", "", f"<{r['url']}>", ""]
+    if r.get("snippet"):
+        lines += [f"> search snippet: {r['snippet']}", ""]
+    if err:
+        lines += [f"_could not read: {err}_", ""]
+        continue
+    ok += 1
+    text = "\n".join(l for l in snap.splitlines() if "StaticText" in l or "heading" in l)
+    text = re.sub(r'^\s*- (StaticText|heading) ?', '', text, flags=re.M).strip() or snap
+    lines += ["```text", text[:6000].replace("```", "'''") + ("\n… (truncated)" if len(text) > 6000 else ""), "```", ""]
+slug = re.sub(r"[^a-z0-9]+", "-", q.lower()).strip("-")[:60] or "research"
+path = os.path.join(out_dir, f"{now:%Y%m%d-%H%M%S}-{slug}.md")
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write("\n".join(lines))
+print(f"read {ok}/{len(results)} sources -> {path}")
 PY
 }
 
@@ -133,7 +222,10 @@ PY
     call "$1" "$2" "${3:-}" ;;
 
   cli)
-    docker exec -i $C python -m agentz.cli "$@" ;;
+    agentz_cli "$@" ;;
+
+  research)
+    research "$@" ;;
 
   browser)
     exec "$HOME/bin/agentz-browser-stack" "${1:-status}" ;;
