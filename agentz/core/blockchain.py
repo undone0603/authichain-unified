@@ -55,20 +55,17 @@ class BlockchainAgent:
             return f"err:blockchain:{str(e)[:50]}"
 
     async def anchor_to_bitcoin(self, product_id: str, data_hash: str) -> Dict[str, Any]:
-        """
-        Simulates anchoring a high-value asset to Bitcoin via Ordinals (L1).
-        This provides a secondary, ultra-permanent 'Sovereign Anchor'.
-        """
-        # In a real scenario, this would use a library like 'ord' or an API like Hiro/Xverse
-        # For the hardened pilot, we generate a deterministic Ordinal-style ID.
-        inscription_id = f"{data_hash}i0"
-        
+        """Return an explicitly simulated candidate; never assert Bitcoin settlement."""
         return {
             "network": "bitcoin_l1",
             "method": "ordinal_inscription",
-            "inscription_id": inscription_id,
-            "sat_ordinal": int(hashlib.sha256(product_id.encode()).hexdigest()[:15], 16),
-            "status": "anchored"
+            "inscription_id": None,
+            "sat_ordinal": None,
+            "simulated_inscription_id": f"{data_hash}i0",
+            "simulated_sat_ordinal": int(hashlib.sha256(product_id.encode()).hexdigest()[:15], 16),
+            "status": "simulated",
+            "verified": False,
+            "on_chain": False,
         }
 
     def verify_anchor(self, tx_hash: str) -> bool:
