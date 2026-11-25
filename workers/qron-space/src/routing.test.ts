@@ -391,6 +391,11 @@ test("/pricing is a real catalogue page, not a 404", async () => {
   // Theater is unlisted since the #1234 catalog freeze.
   assert.equal(html.includes("checkout/theater_1"), false);
   assert.equal(html.includes("checkout/theater_3"), false);
+  assert.equal(html.toLowerCase().includes("never expire"), false);
+  assert.match(
+    html,
+    /100 AI QR generations for \$29, paid once\. No subscription\./
+  );
 });
 
 test("IndexNow key file is served as short-cache plain text", async () => {

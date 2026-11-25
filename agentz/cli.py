@@ -265,6 +265,10 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
         from agentz.integrations.settlement_proof import cli_prove
 
         return cli_prove(args.tx_hash)
+    if args.capabilities_action == "assess-action":
+        from agentz.core.agent_evidence import cli_assess
+
+        return cli_assess(args.action_file)
     if args.capabilities_action == "revenue":
         from agentz.integrations.x402_revenue import cli_revenue
 
@@ -395,6 +399,10 @@ def build_parser() -> argparse.ArgumentParser:
         "prove-settlement",
         help="On-chain proof (receipt, keccak-checked logs) that an x402 payment settled")
     cap_prove.add_argument("tx_hash")
+    cap_assess = cap_sub.add_parser(
+        "assess-action",
+        help="Agent Execution Evidence Gap Assessment for one redacted agent action (read-only)")
+    cap_assess.add_argument("action_file", help="JSON file: action_id, claimed{}, evidence{}")
     cap_call = cap_sub.add_parser("call", help="Call one AVAILABLE read-only capability")
     cap_call.add_argument("capability_id")
     cap_call.add_argument("--args", default=None, help="JSON object of tool arguments")

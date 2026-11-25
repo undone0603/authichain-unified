@@ -1,0 +1,14 @@
+{
+  "name": "agentz-reqbin-rest-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Zero-dependency ReqBin-style REST/HTTP and MCP JSON-RPC probe plugin for Cloudflare Workers and local Node.js MCP",
+  "scripts": {
+    "test": "node --test test/reqbin-rest.test.mjs",
+    "start:http": "node local-server.mjs",
+    "start:stdio": "node local-server.mjs --stdio"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

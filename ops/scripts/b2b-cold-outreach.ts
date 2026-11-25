@@ -311,13 +311,12 @@ function qronEmail(t: typeof QRON_TARGETS[0]): { subject: string; html: string }
   <ul>
     <li>5 visual modes: Static, Stereographic, Holographic, Memory, Custom Prompt</li>
     <li>Ed25519-signed authenticity certificate on every scan, anchored on Polygon (roadmap)</li>
-    <li>White-label API: your brand, your dashboard, fractions of a cent per generation</li>
+    <li>White-label API: your brand, your dashboard</li>
     <li>FTC EO 14392 compliant origin verification (MADE IN USA shield support)</li>
   </ul>
 
   <p>We've pre-provisioned a white-label sandbox for ${t.company}.
-  Creator Pack: <strong>$99 for 500 generations</strong>.
-  White-label API: usage-based from $0.002/QR.</p>
+  Creator Pack: <strong>$99 for 500 generations</strong>.</p>
 
   <p>10-minute call?
   <a href="${CALENDLY}?company=${encodeURIComponent(t.company)}">Book here</a>
