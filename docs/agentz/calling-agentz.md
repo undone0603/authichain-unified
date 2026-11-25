@@ -55,7 +55,7 @@ AgentZ (host net) --CDP 127.0.0.1:9222--> isobrowser-relay (alpine/socat)
 
 - The browser host contains no AgentZ code (separate images, `isobrowser-*` names), so
   `agentz-laws-check` non-replication still holds.
-- `agentz-browser` (the `AGENTZ_BROWSER_BIN` wrapper) is fail-closed: local isolated host first,
+- `agentz/runtime/agentz-browser` (the `AGENTZ_BROWSER_BIN` wrapper, baked into the image by the image PR) is fail-closed: local isolated host first,
   then Browserbase (`BROWSERBASE_API_KEY` + `BROWSERBASE_PROJECT_ID`) or Browser Use
   (`BROWSER_USE_API_KEY`) if set, otherwise exit 3. It never launches a local Chromium.
 - `agentz-browser-stack test` proves public HTTPS works and that direct egress, host ports,
