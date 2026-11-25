@@ -106,11 +106,15 @@ q, n, out_dir, api = os.environ["AGENTZ_Q"], int(os.environ["AGENTZ_N"]), os.env
 secret = os.environ.pop("AGENTZ_SECRET_VALUE")
 raw = json.loads(os.environ["AGENTZ_SEARCH"])
 results = []
-for c in raw.get("content") or []:
-    try:
-        results += json.loads(c).get("results", [])
-    except (ValueError, AttributeError):
-        pass
+sc = raw.get("structured_content")
+if isinstance(sc, dict) and isinstance(sc.get("results"), list):
+    results = list(sc["results"])
+if not results:  # fall back to JSON carried in the text content blocks
+    for c in raw.get("content") or []:
+        try:
+            results += json.loads(c).get("results", [])
+        except (ValueError, AttributeError, TypeError):
+            pass
 results = [r for r in results if str(r.get("url", "")).startswith("https://")][:n]
 if not results:
     sys.exit("agentz: search returned no https results")
