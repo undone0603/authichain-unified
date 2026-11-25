@@ -142,7 +142,6 @@
       "workflows": {
         "agentz-ci.yml": "on",
         "agentz-protected-provenance-build.yml": "on",
-        "agentz-host-executable-identity.yml": "on",
         "agentz-mcp-verify.yml": "on",
         "ci.yml": "on",
         "main.yml": "on",
@@ -257,6 +256,7 @@
       "purpose": "One-shot operator tools (secret binding, backfills, manual sends). Run by hand only; state is not managed.",
       "managed": false,
       "workflows": {
+        "agentz-host-executable-identity.yml": "manual",
         "agentz-host-runtime-preflight.yml": "manual",
         "agentz-protected-host-artifact.yml": "manual",
         "self-hosted-ops-smoke.yml": "manual",
