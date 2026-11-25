@@ -5,7 +5,7 @@ on:
     paths:
       - "agentz/**"
       - "workers/authichain-automation/**"
-      - "tests/test_agentz_*"
+      - "pyproject.toml"
       - ".github/workflows/agentz-mcp-verify.yml"
   workflow_dispatch:
 

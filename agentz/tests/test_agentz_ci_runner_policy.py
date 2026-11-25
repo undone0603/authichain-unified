@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 
-WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/agentz-ci.yml"
+WORKFLOW = Path(__file__).resolve().parents[2] / ".github/workflows/agentz-ci.yml"
 
 
 def test_scoped_tinyfish_job_uses_only_github_hosted_runner():
@@ -49,4 +49,4 @@ def test_agentz_ci_provisions_python_and_runs_pytest_with_declared_deps():
         blob = yaml.dump(jobs[name])
         assert "requirements-agentz.txt" in blob
         assert "-m pytest" in blob
-        assert "tests/test_agentz_" in blob
+        assert "agentz/tests" in blob

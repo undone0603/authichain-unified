@@ -35,11 +35,11 @@ jobs:
           AGENTZ_TINYFISH_SCOUT_ENABLED: ""
         run: |
           PYTHONPATH="${GITHUB_WORKSPACE}" python3 -m pytest -q \
-            tests/test_agentz_tinyfish_mcp.py \
-            tests/test_agentz_tinyfish_scout.py \
-            tests/test_agentz_cli_exit_status.py \
-            tests/test_agentz_ci_runner_policy.py \
-            tests/test_agentz_peer_learning.py
+            agentz/tests/test_agentz_tinyfish_mcp.py \
+            agentz/tests/test_agentz_tinyfish_scout.py \
+            agentz/tests/test_agentz_cli_exit_status.py \
+            agentz/tests/test_agentz_ci_runner_policy.py \
+            agentz/tests/test_agentz_peer_learning.py
       - name: Verify real AgentZ dry-run and missing-key failure
         env:
           TINYFISH_API_KEY: ""
@@ -104,8 +104,7 @@ jobs:
       - name: Run AgentZ pytest suites
         run: |
           PYTHONPATH="${GITHUB_WORKSPACE}" "$AGENTZ_VENV/bin/python" -m pytest -q \
-            agentz/tests \
-            tests/test_agentz_*.py
+            agentz/tests
 
       - name: Confirm the web-client stub is not sold as an ABI
         run: |

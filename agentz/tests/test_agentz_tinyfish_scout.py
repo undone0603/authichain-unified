@@ -218,7 +218,7 @@ def test_prompt_injection_in_untrusted_search_text_is_ignored():
 
 
 def test_scout_docs_state_opt_in_read_only_zero_outbound():
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     files = [
         root / "agentz" / "workflows" / "handlers" / "tinyfish_a2a_scout.py",
         root / "docs" / "operations" / "AGENTZ_TINYFISH_MCP.md",
@@ -373,7 +373,7 @@ def test_scout_masks_secret_bearing_transport_failure(monkeypatch):
 
 def test_mcp_json_pins_tinyfish_and_omits_unpinned_a2a():
     """#2246 a2a-mcp-server stays deferred until a read-only tool allowlist is pinned."""
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     mcp = json.loads((root / ".mcp.json").read_text(encoding="utf-8"))
     servers = mcp["mcpServers"]
     assert "a2a" not in servers

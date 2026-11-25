@@ -27,7 +27,7 @@ commands:
     parameters:
       task:
         type: enum
-        enum: [quality, typecheck-ratchet, test-workers, test-other, build, extras]
+        enum: [quality, typecheck-ratchet, test-workers, test-other, build, extras, agentz]
       seconds:
         type: integer
     steps:
@@ -96,6 +96,15 @@ jobs:
     steps:
       - bounded-check:
           task: extras
+          seconds: 900
+
+  # AgentZ: Python suite, wheel packaging smoke, and edge/scheduler node tests.
+  # Skipped (and reported green) when the diff only touches AuthiChain app roots.
+  agentz:
+    executor: node
+    steps:
+      - bounded-check:
+          task: agentz
           seconds: 1500
       - store_test_results:
           path: /tmp/pytest-results
@@ -116,6 +125,11 @@ jobs:
           command: |
             set -euo pipefail
             test "$(git rev-parse HEAD)" = "${CIRCLE_SHA1:?missing exact SHA}"
+            scope="$(node scripts/ci/ci-scope.mjs runtime-db-attestation-postgres)" || scope="full"
+            if [ "$scope" = "skip" ]; then
+              echo "Scoped CI fast path: runtime-db-attestation-postgres not affected by the diff"
+              exit 0
+            fi
             mkdir -p "$HOME/.local/bin"
             export PATH="$HOME/.local/bin:$PATH"
             corepack enable --install-directory "$HOME/.local/bin"
@@ -131,15 +145,39 @@ jobs:
             timeout --signal=TERM --kill-after=10s 120s node scripts/ci/dpp-activation-outbox-postgres-acceptance.mjs
           no_output_timeout: 20m
 
+  authichain-quality-gate:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - run:
+          name: AuthiChain required jobs succeeded
+          command: |
+            timeout --signal=TERM --kill-after=10s 60s /bin/bash -eu -o pipefail -c 'echo "CircleCI AuthiChain quality gate completed for ${CIRCLE_SHA1:?missing pipeline revision}"'
+          no_output_timeout: 2m
+
+  agentz-quality-gate:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - run:
+          name: AgentZ required jobs succeeded
+          command: |
+            timeout --signal=TERM --kill-after=10s 60s /bin/bash -eu -o pipefail -c 'echo "CircleCI AgentZ quality gate completed for ${CIRCLE_SHA1:?missing pipeline revision}"'
+          no_output_timeout: 2m
+
+  # The branch ruleset requires this context. It now means "both product
+  # gates passed"; each product gate is scoped by scripts/ci/ci-scope.mjs.
   main-quality-gate:
     docker:
       - image: cimg/base:stable
     resource_class: small
     steps:
       - run:
-          name: Six required jobs succeeded
+          name: Both product gates succeeded
           command: |
-            timeout --signal=TERM --kill-after=10s 60s /bin/bash -eu -o pipefail -c 'echo "CircleCI six-job quality gate completed for ${CIRCLE_SHA1:?missing pipeline revision}"'
+            timeout --signal=TERM --kill-after=10s 60s /bin/bash -eu -o pipefail -c 'echo "CircleCI main quality gate (AuthiChain + AgentZ) completed for ${CIRCLE_SHA1:?missing pipeline revision}"'
           no_output_timeout: 2m
 
 workflows:
@@ -169,7 +207,10 @@ workflows:
       - runtime-db-attestation-postgres:
           requires: [test-workers]
           filters: *quality-branches
-      - main-quality-gate:
+      # AgentZ does not wait on AuthiChain's test-workers.
+      - agentz:
+          filters: *quality-branches
+      - authichain-quality-gate:
           requires:
             - quality
             - typecheck-ratchet
@@ -178,4 +219,14 @@ workflows:
             - build
             - extras
             - runtime-db-attestation-postgres
+          filters: *quality-branches
+      - agentz-quality-gate:
+          requires:
+            - quality
+            - agentz
+          filters: *quality-branches
+      - main-quality-gate:
+          requires:
+            - authichain-quality-gate
+            - agentz-quality-gate
           filters: *quality-branches

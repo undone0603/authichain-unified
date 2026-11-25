@@ -72,7 +72,7 @@ From a network-connected, credential-isolated local/WSL clone **at this PR's exa
 ```bash
 python -m pip install -r requirements-agentz.txt
 python -m playwright install chromium
-python -m pytest -q tests/test_agentz_glama_browser_audit.py
+python -m pytest -q agentz/tests/test_agentz_glama_browser_audit.py
 node --test scripts/ci/glama-mcp-free-smoke.test.mjs
 python -m agentz.cli run glama_browser_audit --mode dry-run
 python -m agentz.cli run glama_browser_audit --mode confirm
