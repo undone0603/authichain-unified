@@ -10,8 +10,8 @@ of job history, GitHub environment secrets, deployment approvals, or release aut
 | `main.yml` / `lint.yml` (root Vitest) | `test-other` | `pnpm exec vitest run`, in addition to existing filtered workspace tests |
 | `windows-path-safety.yml` | `quality` | Exact `scripts/check-windows-paths.sh` index scan |
 | `security-scan.yml` on PR/push | `quality` | Gitleaks 8.28.0 tree scan with GitHub-release SHA-256 pin, redacted output |
-| `agentz-mcp-verify.yml` | `extras`, `test-workers` | All `tests/test_agentz_*.py` (including its 5 focused Python files), MCP registration import, existing edge/scheduler Node suites |
-| `agentz-ci.yml` | `extras` | `agentz/tests`, `tests/test_agentz_*.py`, TinyFish dry-run and missing-key negative test, audit proof |
+| `agentz-mcp-verify.yml` | `agentz` | All `agentz/tests` (including its 5 focused Python files), MCP registration import, existing edge/scheduler Node suites |
+| `agentz-ci.yml` | `agentz` | `agentz/tests`, TinyFish dry-run and missing-key negative test, audit proof |
 | `ci.yml` | `extras` | Drizzle migrations and AgentZ Python tests already present; expanded Python coverage |
 | `typecheck-ratchet.yml` | `typecheck-ratchet` | Existing exact-head `node scripts/typecheck-ratchet.mjs` |
 | `main.yml` (workspace) | `quality`, `test-other`, `build`, `test-workers` | Existing pnpm check, lint, workspace test, build, policy guard |
