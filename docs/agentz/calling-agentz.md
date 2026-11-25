@@ -29,6 +29,19 @@ agentz cli list                    python -m agentz.cli inside the container (wi
 agentz browser status|test|up|down manage the isolated browser host
 ```
 
+## Key possession (`z verify`)
+
+`z verify` proves that the key AgentZ is given is the one it publishes. It runs AgentZ's own
+`identity.py` possession check, compares the result with the roster on main and the live
+`did.json`, and signs a fresh challenge. No key material leaves the container.
+
+`z verify --publish` also signs an operator-binding proof: an EdDSA JWS whose `kid` is
+`did:web:authichain.com:agents:agentz#key-1` and whose freshness value is the current main commit.
+It publishes the proof as a public gist from the logged-in gh account, then re-checks the published
+copy with `verify_proof.py`, which anyone can run with only `cryptography` installed.
+
+Latest proof: https://gist.github.com/undone0603/b3a5fe4338d417036852a7297937c2b3
+
 ## `@agentz` in GitHub comments
 
 `.github/workflows/agentz-mention.yml`. The first line of an issue, PR or PR review comment that

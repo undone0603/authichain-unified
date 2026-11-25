@@ -37,6 +37,7 @@ agentz (short: z) - talk to AgentZ from a terminal (same verbs as "@agentz <verb
   z                        status            z w [filter]     workflows
   z example.com            browse            z run <id>       dry-run a workflow
   z "your question"        research          z b|r|s          browse | research | status
+  z verify                 prove key possession     z verify --publish   + public signed proof (gist)
 
   agentz status                    service, identity, isolated browser, workflow count
   agentz browse <https-url>        read a public page through the isolated browser
@@ -156,6 +157,83 @@ print(f"read {ok}/{len(results)} sources -> {path}")
 PY
 }
 
+# verify [--publish]: prove AgentZ's key possession (AgentZ's own identity.py check + live did.json
+# + fresh sign/verify challenge). --publish signs an operator-binding proof (EdDSA JWS, freshness =
+# current main commit) and publishes it as a public gist from the logged-in gh account, then
+# re-verifies the published copy with the standalone verifier. Never prints key material.
+SKILL_DIR="${AGENTZ_SKILL_DIR:-$(dirname "$(readlink -f "$0")")}"
+verify_possession() {
+  local publish=false; [ "${1:-}" = --publish ] && publish=true
+  local repo="${AGENTZ_REPO:-$HOME/projects/authichain-unified}" op
+  git -C "$repo" fetch -q origin main || die "git fetch failed in $repo"
+  local roster did_doc sha date
+  roster=$(git -C "$repo" show origin/main:workers/authichain-com/src/bot-identities.ts) || die "roster not on main"
+  did_doc=$(curl -fsS -m 20 https://authichain.com/agents/agentz/did.json) || die "cannot fetch live did.json"
+  sha=$(git -C "$repo" rev-parse origin/main); date=$(git -C "$repo" show -s --format=%cI origin/main)
+  op=$(gh api user --jq .login 2>/dev/null || echo undone0603)
+  local res rc
+  res=$(docker exec -i -e ROSTER_SRC="$roster" -e DID_DOC="$did_doc" -e MODE="$($publish && echo sign || echo check)" \
+        -e MAIN_SHA="$sha" -e MAIN_DATE="$date" -e OPERATOR_GITHUB="$op" -e OPERATOR_DOMAIN=authichain.com \
+        $C python3 - < "$SKILL_DIR/possession.py"); rc=$?
+  AGENTZ_JSON="$res" python3 - <<'PY'
+import json, os
+d = json.loads(os.environ["AGENTZ_JSON"])
+rows = [("agent", d.get("agent_id")), ("published did:key (main)", d.get("roster_did_key")),
+        ("AgentZ possession check", f'{d["agentz_possession_check"]["status"]} - {d["agentz_possession_check"]["reason"]}'),
+        ("key file derives", d.get("derived_did_key")), ("matches roster", d.get("matches_roster")),
+        ("matches live did.json", d.get("matches_live_did_json")), ("fresh challenge", d.get("challenge")),
+        ("trusted issuer", d.get("trusted_issuer")), ("RESULT", "VERIFIED" if d.get("verified") else "NOT VERIFIED")]
+for k, v in rows:
+    print(f"{k:<26}: {v}")
+PY
+  [ $rc = 0 ] || return 1
+  $publish || return 0
+
+  local dir="${AGENTZ_PROOF_DIR:-$HOME/.local/share/agentz/proofs}" ts; mkdir -p "$dir"; ts=$(date -u +%Y%m%dT%H%M%SZ)
+  local tmp; tmp=$(mktemp -d)
+  AGENTZ_JSON="$res" python3 - "$tmp" <<'PY'
+import json, os, sys
+d = json.loads(os.environ["AGENTZ_JSON"]); p = d["proof"]; t = sys.argv[1]
+open(f"{t}/agentz-possession.jws", "w").write(p["jws"] + "\n")
+open(f"{t}/agentz-possession.payload.json", "w").write(json.dumps(p["payload"], indent=2) + "\n")
+pl = p["payload"]
+open(f"{t}/README.md", "w").write(f"""# AgentZ operator key-possession proof
+
+**{pl['statement']}**
+
+- Agent: `{pl['agent_id']}` / `{pl['did']}`
+- Key: `{pl['did_key']}` (published at {pl['did_document']} and https://authichain.com/agents/agentz)
+- Signed: {pl['issued_at']}, after `{pl['freshness']['repo']}@{pl['freshness']['main_commit'][:12]}` ({pl['freshness']['main_commit_date']})
+- Published by GitHub account **{pl['operator']['github']}** (this gist's owner)
+
+`agentz-possession.jws` is a compact EdDSA JWS (`kid` = `did:web:authichain.com:agents:agentz#key-1`);
+`agentz-possession.payload.json` is its decoded payload.
+
+## Verify it yourself
+
+```
+pip install cryptography
+python3 verify_proof.py <raw URL of agentz-possession.jws> --gist <this gist URL>
+```
+
+It checks the signature against the live did.json key, that the payload names that key, that the
+freshness commit exists and predates the signature, and that this gist is owned by the named operator.
+
+**Limits:** {pl['limits']}
+""")
+PY
+  cp "$SKILL_DIR/verify_proof.py" "$tmp/verify_proof.py"
+  cp "$tmp/agentz-possession.jws" "$dir/$ts.jws"; cp "$tmp/agentz-possession.payload.json" "$dir/$ts.json"
+  local url; url=$(gh gist create --public -d "AgentZ (agent:authichain:agentz) operator key-possession proof $ts" \
+      "$tmp/README.md" "$tmp/agentz-possession.jws" "$tmp/agentz-possession.payload.json" "$tmp/verify_proof.py" | tail -1) \
+      || { rm -rf "$tmp"; die "gist publish failed (proof saved in $dir/$ts.jws)"; }
+  rm -rf "$tmp"
+  echo "published: $url"; echo "$url" > "$dir/$ts.gist"
+  local raw; raw=$(gh api "gists/${url##*/}" --jq '.files["agentz-possession.jws"].raw_url')
+  echo "--- independent re-verification of the published copy:"
+  python3 "$SKILL_DIR/verify_proof.py" "$raw" --gist "$url" | grep -E '^(PASS|FAIL|RESULT)'
+}
+
 cmd="${1:-status}"; shift || true
 # Shorthand: `z example.com` / `z https://…` browses; `z "a question with spaces"` researches.
 if [[ "$cmd" =~ ^https?:// || "$cmd" =~ ^[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/.*)?$ ]]; then
@@ -236,6 +314,9 @@ PY
 
   research|r)
     research "$@" ;;
+
+  verify|v)
+    verify_possession "$@" ;;
 
   browser)
     exec "$HOME/bin/agentz-browser-stack" "${1:-status}" ;;
