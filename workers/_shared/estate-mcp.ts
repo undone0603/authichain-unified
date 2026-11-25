@@ -20,7 +20,6 @@ import {
   readPaymentProofHeader,
   X402_REGISTRY_NOT_BOUND,
   x402PriceUsd,
-  x402PaidVerifyStatus,
   type X402EnvVars,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
@@ -38,7 +37,12 @@ import {
 } from "../../src/lib/dpp-readiness.ts";
 
 const DPP_CHECK_URL = "https://authichain.com/dpp-check";
-import { canonicalVerifyBinding, sisterOrigin, type SisterX402Env } from "./estate-x402.ts";
+import {
+  canonicalVerifyBinding,
+  sisterOrigin,
+  sisterPaidVerifyStatus,
+  type SisterX402Env,
+} from "./estate-x402.ts";
 import {
   guardedForward,
   scopedReplayStore,
@@ -111,7 +115,7 @@ function publishedPayTo(env?: SisterX402Env): string {
   );
 }
 
-function mcpTools(brand: SisterDiscoveryBrand) {
+function mcpTools(brand: SisterDiscoveryBrand, bound = false) {
   const human =
     brand === "qron"
       ? "StrainChain Passport, EU DPP, and QRON Starter/Creator Payment Links"
@@ -124,7 +128,7 @@ function mcpTools(brand: SisterDiscoveryBrand) {
     },
     {
       name: "verify",
-      description: x402PaidVerifyStatus().bound
+      description: sisterPaidVerifyStatus(bound).bound
         ? "Paid AuthiChain verification. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 ($0.05 USDC on Base). Retry with X-PAYMENT."
         : "Paid AuthiChain verification, not answering yet. Arguments that cannot be a seal UUID are HTTP 400 before payment. Empty arguments are unpaid HTTP 402 ($0.05 USDC on Base) for discovery; a paid call is refused with 503 registry_not_bound before settlement, so no payment is taken. Use query_provenance for a free lookup.",
       inputSchema: {
@@ -143,21 +147,31 @@ function mcpTools(brand: SisterDiscoveryBrand) {
       name: "dpp_readiness_check",
       description:
         "Free informational EU Digital Product Passport readiness questionnaire; it cannot issue a passport or certify compliance. Returns a 0-100 score, gaps, and the dated obligation for the product category (battery passport is law from 18 Feb 2027; other categories are ESPR targets). Not legal advice.",
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+      },
       inputSchema: {
         type: "object",
         properties: {
           category: {
             type: "string",
             enum: DPP_CATEGORIES.map(c => c.id),
-            description: DPP_CATEGORIES.map(c => `${c.id}: ${c.label}`).join("; "),
+            description: DPP_CATEGORIES.map(c => `${c.id}: ${c.label}`).join(
+              "; "
+            ),
           },
           sells_in_eu: {
             type: "boolean",
-            description: "Sold into the EU directly or via an importer. Default true.",
+            description:
+              "Sold into the EU directly or via an importer. Default true.",
           },
           ...Object.fromEntries(
-            DPP_QUESTIONS.map(q => [q.id, { type: "boolean", description: q.question }])
+            DPP_QUESTIONS.map(q => [
+              q.id,
+              { type: "boolean", description: q.question },
+            ])
           ),
         },
         required: ["category"],
@@ -182,7 +196,10 @@ function mcpTools(brand: SisterDiscoveryBrand) {
   ];
 }
 
-export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
+export function sisterMcpPricingDiscovery(
+  brand: SisterDiscoveryBrand,
+  bound = false
+) {
   const origin = sisterOrigin(brand);
   const humanCheckout: Record<string, unknown> = {
     rail: "stripe",
@@ -217,23 +234,23 @@ export function sisterMcpPricingDiscovery(brand: SisterDiscoveryBrand) {
       wellKnown: "https://authichain.com/.well-known/x402.json",
       mcp: `${origin}/mcp`,
       docs: "https://authichain.com/x402",
-      note: x402PaidVerifyStatus().bound
+      note: sisterPaidVerifyStatus(bound).bound
         ? "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402; pay Base USDC and retry with X-PAYMENT and a seal UUID."
         : "An empty JSON body is the unpaid HTTP 402. A non-UUID sealId is HTTP 400 before payment. Unpaid POST /api/x402 and unpaid MCP tools/call verify return HTTP 402 for discovery, but a paid call is refused with 503 registry_not_bound before settlement until the registry lookup is bound. No payment is taken.",
-      paidVerify: x402PaidVerifyStatus(),
+      paidVerify: sisterPaidVerifyStatus(bound),
     },
     humanCheckout,
   };
 }
 
-function discoveryBody(brand: SisterDiscoveryBrand) {
+function discoveryBody(brand: SisterDiscoveryBrand, bound = false) {
   const origin = sisterOrigin(brand);
   return {
     protocol: "mcp",
     jsonrpc: "2.0",
     serverInfo: { name: BRAND_NAME[brand], version: "1.0.0" },
-    tools: mcpTools(brand),
-    pricing: sisterMcpPricingDiscovery(brand),
+    tools: mcpTools(brand, bound),
+    pricing: sisterMcpPricingDiscovery(brand, bound),
     pay: {
       x402: `POST ${origin}/api/x402`,
       mcpVerify: `POST ${origin}/mcp tools/call verify`,
@@ -327,7 +344,8 @@ async function handleRpc(
   }
   const method = body.method ?? "";
   const id = body.id;
-  const tools = mcpTools(brand);
+  const bound = !!verifyApp;
+  const tools = mcpTools(brand, bound);
 
   if (method === "initialize" || method === "notifications/initialized") {
     return rpcResult(id, {
@@ -354,7 +372,11 @@ async function handleRpc(
         content: [
           {
             type: "text",
-            text: JSON.stringify(sisterMcpPricingDiscovery(brand), null, 2),
+            text: JSON.stringify(
+              sisterMcpPricingDiscovery(brand, bound),
+              null,
+              2
+            ),
           },
         ],
       });
@@ -371,7 +393,9 @@ async function handleRpc(
     }
     if (name === "dpp_readiness_check") {
       const args = params.arguments ?? {};
-      const input = parseDppReadinessInput(k => (args as Record<string, unknown>)[k]);
+      const input = parseDppReadinessInput(
+        k => (args as Record<string, unknown>)[k]
+      );
       if (!input) {
         return rpcResult(id, {
           content: [
@@ -386,7 +410,10 @@ async function handleRpc(
       const result = scoreDppReadiness(input, { offerAudit: false });
       return rpcResult(id, {
         content: [
-          { type: "text", text: JSON.stringify({ ...result, web: DPP_CHECK_URL }, null, 2) },
+          {
+            type: "text",
+            text: JSON.stringify({ ...result, web: DPP_CHECK_URL }, null, 2),
+          },
         ],
       });
     }
@@ -536,7 +563,7 @@ export async function tryHandleSisterMcp(
   }
 
   if (request.method === "GET") {
-    return json(200, discoveryBody(brand));
+    return json(200, discoveryBody(brand, !!verifyApp));
   }
 
   if (request.method === "POST") {

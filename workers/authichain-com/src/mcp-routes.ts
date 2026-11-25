@@ -31,7 +31,11 @@ import {
   // import as a TS5097 error. Same convention as index.ts.
 } from "../../../src/lib/x402";
 import type { X402Env } from "./x402-routes";
-import { NEGOTIATE_TOOL, negotiateQuote, type X402RailTerms } from "./mcp-negotiate";
+import {
+  NEGOTIATE_TOOL,
+  negotiateQuote,
+  type X402RailTerms,
+} from "./mcp-negotiate";
 
 type McpEnv = X402Env & {
   /** Service binding to authichain-edge-router. Public fetch of this zone returns 522. */
@@ -66,7 +70,12 @@ import {
   findPublishedPack,
   packUrl,
 } from "./published-packs";
-import { gatedCheckoutUrl, planById, planPaymentLink, planUsd } from "../../../src/lib/plans";
+import {
+  gatedCheckoutUrl,
+  planById,
+  planPaymentLink,
+  planUsd,
+} from "../../../src/lib/plans";
 
 /**
  * Protocol versions this endpoint can speak, newest first. `initialize`
@@ -123,9 +132,9 @@ const JSON_HEADERS = {
  * names the live plan from plans.ts with its own description (a workspace, not
  * an audit, certification or legal advice). Out of scope: nothing to sell.
  */
-export function dppPaidOption(
-  inScope: boolean
-): { paidOption?: Record<string, unknown> } {
+export function dppPaidOption(inScope: boolean): {
+  paidOption?: Record<string, unknown>;
+} {
   const plan = planById("dpp_readiness");
   const checkout = planPaymentLink("dpp_readiness");
   if (!inScope || !plan || !plan.listed || !checkout) return {};
@@ -637,7 +646,9 @@ function negotiateRailTerms(env?: X402Env): X402RailTerms | null {
     payTo: livePayTo(env),
     asset: BASE_USDC_ASSET,
     facilitator:
-      env?.X402_FACILITATOR_URL?.trim() || process.env.X402_FACILITATOR_URL?.trim() || null,
+      env?.X402_FACILITATOR_URL?.trim() ||
+      process.env.X402_FACILITATOR_URL?.trim() ||
+      null,
     resource: "https://authichain.com/api/x402",
   };
 }
@@ -657,7 +668,7 @@ function mcpTools(env?: X402Env) {
       return {
         ...tool,
         description:
-          "Free. Quotes without charging or authorizing payment the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness. One-time pack credits (Starter and Creator) never expire.",
+          "Free. Quotes without charging or authorizing payment the live x402 agent rail ($0.05 USDC on Base) and live human Stripe checkouts: $29 Starter Pack (100 generations, paid once) at https://authichain.com/checkout/starter and $299 EU DPP Readiness at https://authichain.com/checkout/dpp_readiness.",
       };
     }
     if (tool.name === "verify") {
@@ -677,7 +688,7 @@ function humanStripeCheckout() {
   return {
     status: "live" as const,
     rail: "stripe",
-    note: "One-time pack credits (Starter and Creator) never expire.",
+    note: "Starter and Creator include one-time pack credits.",
     starter: {
       usd: planUsd("starter"),
       generations: starter?.generations ?? 100,
@@ -877,7 +888,8 @@ const SAFE_REGISTRY_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,179}$/;
  * gets a non-uuid value, so those terms are only added for uuid identifiers.
  * Without this, every product id, GTIN, serial or lot lookup read as an outage.
  */
-const UUID_IDENTIFIER = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_IDENTIFIER =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** PostgREST `or` filter over `columns`, keeping uuid columns only for uuid ids. */
 export function registryOrFilter(
@@ -942,7 +954,11 @@ async function lookupAuthSeal(
   }
 
   const filters = [
-    registryOrFilter(assetId, ["id", "product_id", "batch_id", "qr_payload"], ["id"]),
+    registryOrFilter(
+      assetId,
+      ["id", "product_id", "batch_id", "qr_payload"],
+      ["id"]
+    ),
     registryOrFilter(assetId, ["id", "product_id", "batch_id"], ["id"]),
   ];
   try {
@@ -1049,7 +1065,16 @@ async function lookupPublishedAttestation(
     limit: "2",
     or: registryOrFilter(
       assetId,
-      ["attestation_id", "seal_id", "product_id", "batch_id", "object_id", "gtin", "serial", "lot"],
+      [
+        "attestation_id",
+        "seal_id",
+        "product_id",
+        "batch_id",
+        "object_id",
+        "gtin",
+        "serial",
+        "lot",
+      ],
       ["seal_id"]
     ),
   });
@@ -1638,7 +1663,10 @@ async function handleRpc(
     };
     const name = params.name ?? "";
     if (name === "negotiate") {
-      const quote = negotiateQuote(params.arguments ?? {}, negotiateRailTerms(env));
+      const quote = negotiateQuote(
+        params.arguments ?? {},
+        negotiateRailTerms(env)
+      );
       return rpcResult(id, {
         content: [{ type: "text", text: JSON.stringify(quote.body, null, 2) }],
         structuredContent: quote.body,
@@ -1737,7 +1765,11 @@ async function handleRpc(
           {
             type: "text",
             text: JSON.stringify(
-              { ...result, web: DPP_CHECK_URL, ...dppPaidOption(result.inScope) },
+              {
+                ...result,
+                web: DPP_CHECK_URL,
+                ...dppPaidOption(result.inScope),
+              },
               null,
               2
             ),

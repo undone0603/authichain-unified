@@ -24,11 +24,13 @@ import {
   X402_RESOURCE_DESCRIPTION,
   x402AgentCard,
   x402HealthReport,
+  x402PaidVerifyStatus,
   x402PriceUsd,
   x402ScanFanout,
   X402_PUBLISHED_PAY_TO,
   type X402EnvVars,
   type X402HealthEnv,
+  type X402PaidVerifyStatus,
   type X402VerifyBinding,
 } from "../../src/lib/x402.ts";
 import {
@@ -95,7 +97,9 @@ export function isSisterX402Path(pathname: string): boolean {
 
 function isAgentCardPath(pathname: string): boolean {
   const p = normalizePath(pathname);
-  return p === "/.well-known/agent-card.json" || p === "/.well-known/agent.json";
+  return (
+    p === "/.well-known/agent-card.json" || p === "/.well-known/agent.json"
+  );
 }
 
 /**
@@ -169,6 +173,20 @@ function hydrateX402(env?: SisterX402Env) {
   }
 }
 
+/**
+ * Sister paid-verify status. Bound means this worker forwards to
+ * authichain.com's registry; sister-origin settlement is not claimed.
+ */
+export function sisterPaidVerifyStatus(bound: boolean): X402PaidVerifyStatus {
+  const status = x402PaidVerifyStatus(bound);
+  if (!status.bound) return status;
+  return {
+    ...status,
+    detail:
+      "When bound, paid verification is forwarded to authichain.com's registry.",
+  };
+}
+
 function healthEnv(env?: SisterX402Env, bound = false): X402HealthEnv {
   return {
     // Bound only when a VERIFY_APP binding is present to forward paid calls.
@@ -190,9 +208,20 @@ function paidResourceUrl(request: Request): string {
   return `${url.protocol}//${url.host}${normalizePath(url.pathname)}`;
 }
 
-async function healthResponse(env?: SisterX402Env, bound = false): Promise<Response> {
+async function healthResponse(
+  env?: SisterX402Env,
+  bound = false
+): Promise<Response> {
   hydrateX402(env);
-  return json(200, await x402HealthReport(healthEnv(env, bound)));
+  const report = await x402HealthReport(healthEnv(env, bound));
+  // Sisters do not serve /api/v1/agent-verify (that path 404s here).
+  // Health must not advertise it; paid verify is POST /api/x402.
+  return json(200, {
+    ...report,
+    endpoint: "/api/x402",
+    aliases: report.aliases.filter(path => path !== "/api/v1/agent-verify"),
+    paidVerify: sisterPaidVerifyStatus(bound),
+  });
 }
 
 async function catalogResponse(
@@ -310,7 +339,9 @@ async function agentVerify(
  * EIP-3009 authorization binds amount, payTo, asset and nonce, not the URL, so
  * a payment signed against a sister 402 settles there unchanged.
  */
-export function canonicalVerifyBinding(binding: X402VerifyBinding): X402VerifyBinding {
+export function canonicalVerifyBinding(
+  binding: X402VerifyBinding
+): X402VerifyBinding {
   return {
     fetch(request: Request): Promise<Response> {
       const url = new URL(request.url);

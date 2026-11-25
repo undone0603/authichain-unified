@@ -208,6 +208,89 @@ test("QRON MCP lists Starter and Creator; sisters do not", async () => {
   }
 });
 
+test("MCP discovery paidVerify matches VERIFY_APP the way health does", async () => {
+  const binding = { fetch: async () => new Response("{}") };
+  for (const { brand, host } of BRANDS) {
+    const unbound = await tryHandleSisterMcp(req(host, "/mcp"), brand);
+    const bound = await tryHandleSisterMcp(
+      req(host, "/mcp"),
+      brand,
+      {},
+      binding
+    );
+    const a = (await unbound!.json()) as {
+      tools: Array<{ name: string; description?: string }>;
+      pricing: {
+        agentRail: {
+          note: string;
+          paidVerify: { bound: boolean; status: string; detail: string };
+        };
+      };
+    };
+    const b = (await bound!.json()) as {
+      tools: Array<{ name: string; description?: string }>;
+      pricing: {
+        agentRail: {
+          note: string;
+          paidVerify: { bound: boolean; status: string; detail: string };
+        };
+      };
+    };
+    assert.equal(a.pricing.agentRail.paidVerify.bound, false, host);
+    assert.equal(
+      a.pricing.agentRail.paidVerify.status,
+      "registry_not_bound",
+      host
+    );
+    assert.match(a.pricing.agentRail.note, /registry_not_bound/, host);
+    const unboundVerify = a.tools.find(t => t.name === "verify");
+    assert.match(unboundVerify?.description ?? "", /registry_not_bound/, host);
+
+    assert.equal(b.pricing.agentRail.paidVerify.bound, true, host);
+    assert.equal(b.pricing.agentRail.paidVerify.status, "bound", host);
+    assert.equal(
+      b.pricing.agentRail.note.includes("registry_not_bound"),
+      false,
+      host
+    );
+    assert.match(
+      b.pricing.agentRail.paidVerify.detail,
+      /forwarded to authichain\.com's registry/,
+      host
+    );
+    const boundVerify = b.tools.find(t => t.name === "verify");
+    assert.equal(
+      (boundVerify?.description ?? "").includes("registry_not_bound"),
+      false,
+      host
+    );
+
+    const priced = await tryHandleSisterMcp(
+      req(host, "/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "get_pricing" },
+        }),
+      }),
+      brand,
+      {},
+      binding
+    );
+    const pricedBody = (await priced!.json()) as {
+      result: { content: Array<{ text: string }> };
+    };
+    const discovery = JSON.parse(pricedBody.result.content[0].text) as {
+      agentRail: { paidVerify: { bound: boolean; status: string } };
+    };
+    assert.equal(discovery.agentRail.paidVerify.bound, true, host);
+    assert.equal(discovery.agentRail.paidVerify.status, "bound", host);
+  }
+});
+
 test("JSON-RPC tools/list and get_pricing are public", async () => {
   const list = await tryHandleSisterMcp(
     req("qron.space", "/mcp", {
@@ -593,8 +676,14 @@ test("dpp_readiness_check is free on every sister host and scores answers", asyn
           }),
         }),
         brand
-      ))!.json()) as { result: { content: Array<{ text: string }>; isError?: boolean } };
-    const ok = await call({ category: "battery_passport", unique_id: true, supplier_data: true });
+      ))!.json()) as {
+        result: { content: Array<{ text: string }>; isError?: boolean };
+      };
+    const ok = await call({
+      category: "battery_passport",
+      unique_id: true,
+      supplier_data: true,
+    });
     assert.equal(ok.result.isError, undefined, host);
     const r = JSON.parse(ok.result.content[0].text);
     assert.equal(r.score, 40, host);
