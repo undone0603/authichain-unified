@@ -77,7 +77,7 @@ In scope, in this order (one per green main):
 
 1. the cleanup PR above
 2. #2726 fix(x402): OpenAPI info.description + contact email
-3. #2717 fix(copy): drop stale QRON per-scan prices and add a copy guard
+3. #2717 fix(copy): drop stale QRON unit prices and add a copy guard
 4. #2716 feat(agentz): load team operating rules into the architect planner prompt
 5. #2736 fix(checkout): Stripe return URLs. Payment path, so only if green after
    rebase; reported back before merge if anything looks off.
