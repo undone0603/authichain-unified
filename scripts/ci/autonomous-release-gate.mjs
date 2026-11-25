@@ -12,13 +12,20 @@ export const REQUIRED = [
   'test-workers', 'test-other', 'typecheck-ratchet', 'quality',
   'extras', 'build', 'main-quality-gate',
 ].map(s => 'ci/circleci: ' + s);
+const AUTHICHAIN_CANDIDATE_CHECKS = [
+  ...REQUIRED.filter(context => context !== 'ci/circleci: main-quality-gate'),
+  'ci/circleci: runtime-db-attestation-postgres',
+  'ci/circleci: authichain-quality-gate',
+];
 const SHA = /^[a-f0-9]{40}$/;
 // Accept the current CircleCI app job URL and the older repository-scoped job URL.
 const CIRCLE_JOB = /^(?:https:\/\/circleci\.com\/gh\/undone0603\/authichain-unified\/[0-9]+\/?|https:\/\/app\.circleci\.com\/workflow\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\/job\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})$/;
 function guard(ok, message) { if (!ok) throw new Error('release policy: ' + message); }
 
-export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, ruleset, environment, statuses, shaMatchPath}) {
+export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, ruleset, environment, statuses, shaMatchPath, candidate = false}) {
   const matchPath = shaMatchPath || 'exact-head';
+  const required = candidate ? AUTHICHAIN_CANDIDATE_CHECKS : REQUIRED;
+  guard(!candidate || matchPath === 'exact-head', 'candidate requires current protected main');
   guard(matchPath === 'exact-head' || matchPath === 'ancestor', 'unknown SHA match path');
   guard(repo === REPO, 'wrong repository');
   guard(SHA.test(expectedSha || '') && SHA.test(dispatchSha || ''), 'exact dispatch SHA mismatch');
@@ -55,7 +62,7 @@ export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, rul
         environment?.deployment_branch_policy?.custom_branch_policies === false &&
         envRules !== null && allowedEnvRules,
         'environment must be protected-branches-only with at most one owner review gate and no wait timer or unknown rule');
-  guard(Number.isInteger(statuses?.total_count) && statuses.total_count >= REQUIRED.length &&
+  guard(Number.isInteger(statuses?.total_count) && statuses.total_count >= required.length &&
         statuses.total_count <= 100 && Array.isArray(statuses?.statuses) &&
         statuses.statuses.length === statuses.total_count, 'missing/incomplete commit-status evidence');
   // GitHub /status returns newest statuses first; the first occurrence is authoritative.
@@ -63,12 +70,12 @@ export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, rul
   for (const entry of statuses.statuses) {
     if (typeof entry.context === 'string' && !recent.has(entry.context)) recent.set(entry.context, entry);
   }
-  for (const name of REQUIRED) {
+  for (const name of required) {
     const status = recent.get(name);
     guard(status?.state === 'success' && CIRCLE_JOB.test(status?.target_url || ''),
           'unverified exact-commit CircleCI status: ' + name);
   }
-  return {sha: expectedSha, checks: REQUIRED.length, environment: ENV};
+  return {sha: expectedSha, checks: required.length, environment: ENV};
 }
 
 async function getJson(path, token, fetchImpl = fetch) {
@@ -80,7 +87,7 @@ async function getJson(path, token, fetchImpl = fetch) {
   return response.json();
 }
 
-export async function verifyLive(env = process.env, fetchImpl = fetch) {
+export async function verifyLive(env = process.env, fetchImpl = fetch, {candidate = false} = {}) {
   const {GH_TOKEN, REPOSITORY, TARGET_SHA, DISPATCH_SHA} = env;
   guard(GH_TOKEN?.length > 0, 'missing read-only GitHub token');
   guard(REPOSITORY === REPO && SHA.test(TARGET_SHA || '') && SHA.test(DISPATCH_SHA || ''),
@@ -93,7 +100,7 @@ export async function verifyLive(env = process.env, fetchImpl = fetch) {
   ]);
   return assertReleasePolicy({repo: REPOSITORY, expectedSha: TARGET_SHA,
     dispatchSha: DISPATCH_SHA, branch, ruleset, environment, statuses,
-    shaMatchPath: env.SHA_MATCH_PATH});
+    candidate, shaMatchPath: env.SHA_MATCH_PATH});
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

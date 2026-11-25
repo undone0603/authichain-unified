@@ -146,3 +146,21 @@ test('live verifier on ancestor path still reads CircleCI statuses for expected_
   assert.equal(paths.filter(p => p.startsWith('/commits/')).join(),
     '/commits/' + SHA + '/status?per_page=100');
 });
+
+test('candidate requires exact main, the AuthiChain product gate, and database integration', () => {
+  const x = fixture();
+  x.candidate = true;
+  x.statuses.statuses.pop();
+  for (const name of ['authichain-quality-gate', 'runtime-db-attestation-postgres']) {
+    x.statuses.statuses.push({context: 'ci/circleci: ' + name, state: 'success', target_url: URL});
+  }
+  x.statuses.total_count = x.statuses.statuses.length;
+  assert.equal(assertReleasePolicy(x).checks, 8);
+  assert.throws(() => assertReleasePolicy({...x, candidate: false}), /main-quality-gate/);
+  assert.throws(() => assertReleasePolicy({...x, shaMatchPath: 'ancestor'}), /candidate requires/);
+  for (const status of x.statuses.statuses.slice(-2)) {
+    status.state = 'pending';
+    assert.throws(() => assertReleasePolicy(x), new RegExp(status.context));
+    status.state = 'success';
+  }
+});
