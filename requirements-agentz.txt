@@ -160,7 +160,7 @@ soupsieve==4.0
 sse-starlette==3.4.4
 starlette==1.3.0
 storage3==2.31.0
-streamlit==1.58.0
+streamlit==1.67.0
 StrEnum==0.4.15
 stripe==15.2.0
 supabase==2.31.0
