@@ -58,7 +58,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           context="$(mktemp -d)"
           image="agentz-host:$GITHUB_SHA"
-          git archive "$GITHUB_SHA" agentz requirements-agentz.txt workers/authichain-agentz/Dockerfile |
+          git archive "$GITHUB_SHA" agentz requirements-agentz.txt workers/authichain-agentz/Dockerfile \
+            workers/authichain-com/src/bot-identities.ts |
             tar -x -C "$context"
           docker build --platform linux/arm64 --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --tag "$image" --file "$context/workers/authichain-agentz/Dockerfile" "$context"
@@ -77,6 +78,19 @@ jobs:
             --retry-delay 2 --max-time 5 "http://$address/health" > "$RUNNER_TEMP/agentz-health.json"
           python3 -c 'import json, sys; assert isinstance(json.load(open(sys.argv[1])), dict)' \
             "$RUNNER_TEMP/agentz-health.json"
+          # /identity must load the published roster (500 if bot-identities.ts is missing).
+          curl --fail --silent --show-error --max-time 10 "http://$address/identity" > "$RUNNER_TEMP/agentz-identity.json"
+          python3 -c 'import json, sys; assert isinstance(json.load(open(sys.argv[1])), dict)' \
+            "$RUNNER_TEMP/agentz-identity.json"
+          # agent-browser is present and runnable; the wrapper fails closed with no isolated browser.
+          docker run --rm --cap-drop ALL --security-opt no-new-privileges --entrypoint /opt/agentz-browser/agent-browser \
+            "$image" --version
+          set +e
+          docker run --rm --cap-drop ALL --security-opt no-new-privileges --entrypoint /opt/agentz-browser/agentz-browser \
+            "$image" open https://example.com
+          rc=$?
+          set -e
+          test "$rc" = 3 || { echo "::error::agentz-browser wrapper did not fail closed (rc=$rc)"; exit 1; }
           mkdir -p "$RUNNER_TEMP/agentz-release"
           docker save "$image" | gzip -n > "$RUNNER_TEMP/agentz-release/agentz-linux-arm64.tar.gz"
           image_bytes="$(docker image inspect --format '{{.Size}}' "$image")"
