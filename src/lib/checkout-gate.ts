@@ -529,6 +529,7 @@ export async function createGatedCheckoutSession(opts: {
   stripeSecretKey: string;
   cookieHeader?: string;
   request: Request;
+  successOrigin?: string;
   claimCheckout?: typeof claimCheckoutAttempt;
   recordSession?: typeof recordCheckoutSession;
   fetchImpl?: typeof fetch;
@@ -536,7 +537,16 @@ export async function createGatedCheckoutSession(opts: {
   const key = (opts.stripeSecretKey || "").trim();
   if (!key)
     return { ok: false, status: 500, error: "Stripe is not configured" };
-  const body = buildGatedSessionBody(opts);
+  // Prefer an explicit origin, then the allowlisted request/Origin host.
+  // Omitting this fell through to CHECKOUT_SUCCESS_ORIGIN (govchain.us), so a
+  // buyer who paid on authichain.com was sent to authichain.govchain.us.
+  const body = buildGatedSessionBody({
+    plan: opts.plan,
+    email: opts.email,
+    fields: opts.fields,
+    cookieHeader: opts.cookieHeader,
+    successOrigin: opts.successOrigin ?? checkoutReturnOrigin(opts.request),
+  });
   const doFetch = opts.fetchImpl ?? fetch;
   const submittedKey = opts.fields.get("checkout_key") || "";
   const idempotencyKey = /^[\w-]{36}$/.test(submittedKey)

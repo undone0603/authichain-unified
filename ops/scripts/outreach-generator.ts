@@ -77,7 +77,7 @@ We built AuthiChain—a white-label verification protocol. It allows print shops
 I actually ran ${shop.domain} through our engine to show you what a ${shop.name}-branded artifact looks like:
 🔗 View Custom Demo: ${result.imageUrl}
 
-You charge your clients a premium for these "Smart Labels." You pay us fractions of a cent per scan via our API.
+You charge your clients a premium for these "Smart Labels."
 
 We've already pre-provisioned a white-label sandbox for you (API Prefix: ${apiKeyPrefix}${wlClient?.id ? `, Client Ref: ${wlClient.id}` : ''}).
 
