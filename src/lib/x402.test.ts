@@ -436,7 +436,11 @@ describe("settlePayment (facilitator)", () => {
     process.env.X402_FACILITATOR_URL = "https://facilitator.example";
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
-        JSON.stringify({ success: false, errorReason: "free_tier_exhausted: top up", errorMessage: "x" }),
+        JSON.stringify({
+          success: false,
+          errorReason: "free_tier_exhausted: top up",
+          errorMessage: "x",
+        }),
         { status: 403, headers: { "content-type": "application/json" } }
       )
     );
@@ -945,6 +949,17 @@ describe("x402ScanFanout", () => {
 });
 
 describe("x402OpenApiDocument", () => {
+  it("serves the Research-gated info.description (sha256 fd6949e5) and contact email when bound", async () => {
+    const spec = await x402OpenApiDocument({
+      X402_PAID_VERIFY_PATH: "seal_lookup",
+    });
+    const { createHash } = await import("node:crypto");
+    expect(
+      createHash("sha256").update(spec.info.description, "utf8").digest("hex")
+    ).toBe("fd6949e551c6eb8928ab8f3e5f3e41edc719280444a4af26f9b215c79eca9a0b");
+    expect(spec.info.contact).toEqual({ email: "authichain@mail.grokbot.com" });
+  });
+
   it("copies price from health and marks POST /api/x402 as x402", async () => {
     const spec = await x402OpenApiDocument(
       { X402_PRICE_USD: "0.10", X402_NETWORK: "base" },
@@ -1057,10 +1072,16 @@ describe("payaiAuthorization (PayAI merchant JWT)", () => {
       "sign",
       "verify",
     ])) as CryptoKeyPair;
-    const pkcs8 = new Uint8Array(await crypto.subtle.exportKey("pkcs8", kp.privateKey));
-    return { publicKey: kp.publicKey, secret: "payai_sk_" + Buffer.from(pkcs8).toString("base64") };
+    const pkcs8 = new Uint8Array(
+      await crypto.subtle.exportKey("pkcs8", kp.privateKey)
+    );
+    return {
+      publicKey: kp.publicKey,
+      secret: "payai_sk_" + Buffer.from(pkcs8).toString("base64"),
+    };
   }
-  const part = (s: string) => JSON.parse(Buffer.from(s, "base64url").toString("utf8"));
+  const part = (s: string) =>
+    JSON.parse(Buffer.from(s, "base64url").toString("utf8"));
 
   it("returns null without both credentials", async () => {
     expect(await payaiAuthorization(undefined, "x")).toBeNull();
@@ -1074,7 +1095,12 @@ describe("payaiAuthorization (PayAI merchant JWT)", () => {
     const [h, p, sig] = auth!.slice(7).split(".");
     expect(part(h)).toEqual({ alg: "EdDSA", typ: "JWT", kid: "key-123" });
     const claims = part(p);
-    expect(claims).toMatchObject({ sub: "key-123", iss: "payai-merchant", iat: 1_800_000_000, exp: 1_800_000_120 });
+    expect(claims).toMatchObject({
+      sub: "key-123",
+      iss: "payai-merchant",
+      iat: 1_800_000_000,
+      exp: 1_800_000_120,
+    });
     expect(claims.jti).toMatch(/^[0-9a-f-]{36}$/);
     const ok = await crypto.subtle.verify(
       "Ed25519",
@@ -1087,8 +1113,12 @@ describe("payaiAuthorization (PayAI merchant JWT)", () => {
 
   it("mints a fresh jti per call because PayAI consumes it", async () => {
     const { secret } = await keyPair();
-    const a = part((await payaiAuthorization("k", secret))!.slice(7).split(".")[1]).jti;
-    const b = part((await payaiAuthorization("k", secret))!.slice(7).split(".")[1]).jti;
+    const a = part(
+      (await payaiAuthorization("k", secret))!.slice(7).split(".")[1]
+    ).jti;
+    const b = part(
+      (await payaiAuthorization("k", secret))!.slice(7).split(".")[1]
+    ).jti;
     expect(a).not.toBe(b);
   });
 
@@ -1102,11 +1132,15 @@ describe("payaiAuthorization (PayAI merchant JWT)", () => {
     delete process.env.PAYAI_API_KEY_ID;
     delete process.env.PAYAI_API_KEY_SECRET;
     await settlePayment("proof", req);
-    expect((spy.mock.calls[0][1]?.headers as Record<string, string>).Authorization).toBeUndefined();
+    expect(
+      (spy.mock.calls[0][1]?.headers as Record<string, string>).Authorization
+    ).toBeUndefined();
     process.env.PAYAI_API_KEY_ID = "key-123";
     process.env.PAYAI_API_KEY_SECRET = secret;
     await settlePayment("proof", req);
-    expect((spy.mock.calls[1][1]?.headers as Record<string, string>).Authorization).toMatch(/^Bearer ey/);
+    expect(
+      (spy.mock.calls[1][1]?.headers as Record<string, string>).Authorization
+    ).toMatch(/^Bearer ey/);
     delete process.env.PAYAI_API_KEY_ID;
     delete process.env.PAYAI_API_KEY_SECRET;
   });

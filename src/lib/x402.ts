@@ -673,8 +673,12 @@ export function attachResourceToPaymentPayload(
 
 function base64UrlBytes(data: Uint8Array): string {
   let binary = "";
-  for (let i = 0; i < data.byteLength; i++) binary += String.fromCharCode(data[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  for (let i = 0; i < data.byteLength; i++)
+    binary += String.fromCharCode(data[i]);
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 /**
@@ -693,7 +697,9 @@ export async function payaiAuthorization(
   const secret = apiKeySecret?.trim().replace(/^payai_sk_/, "");
   if (!id || !secret) return null;
   const enc = new TextEncoder();
-  const header = base64UrlBytes(enc.encode(JSON.stringify({ alg: "EdDSA", typ: "JWT", kid: id })));
+  const header = base64UrlBytes(
+    enc.encode(JSON.stringify({ alg: "EdDSA", typ: "JWT", kid: id }))
+  );
   const payload = base64UrlBytes(
     enc.encode(
       JSON.stringify({
@@ -709,8 +715,18 @@ export async function payaiAuthorization(
   const raw = atob(secret.replace(/-/g, "+").replace(/_/g, "/"));
   const keyBytes = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) keyBytes[i] = raw.charCodeAt(i);
-  const key = await crypto.subtle.importKey("pkcs8", keyBytes, { name: "Ed25519" }, false, ["sign"]);
-  const signature = await crypto.subtle.sign("Ed25519", key, enc.encode(message));
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    keyBytes,
+    { name: "Ed25519" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "Ed25519",
+    key,
+    enc.encode(message)
+  );
   return `Bearer ${message}.${base64UrlBytes(new Uint8Array(signature))}`;
 }
 
@@ -726,7 +742,11 @@ export async function facilitatorErrorSuffix(res: Response): Promise<string> {
     const j = JSON.parse(text) as { errorReason?: unknown; title?: unknown };
     const raw = typeof j.errorReason === "string" ? j.errorReason : j.title;
     if (typeof raw !== "string") return "";
-    const code = raw.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, "_").slice(0, 80);
+    const code = raw
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_.-]+/g, "_")
+      .slice(0, 80);
     return code ? `:${code}` : "";
   } catch {
     return ":non_json_body";
@@ -755,7 +775,8 @@ export async function settlePayment(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "authichain-x402-merchant/1 (+https://authichain.com/x402)",
+        "User-Agent":
+          "authichain-x402-merchant/1 (+https://authichain.com/x402)",
         ...(authorization ? { Authorization: authorization } : {}),
       },
       body: JSON.stringify({
@@ -1461,7 +1482,12 @@ export function x402ScanFanout(
 
 type X402OpenApiDocument = {
   openapi: "3.1.0";
-  info: { title: string; version: string; description: string };
+  info: {
+    title: string;
+    version: string;
+    description: string;
+    contact: { email: string };
+  };
   servers: Array<{ url: string }>;
   paths: Record<string, unknown>;
 };
@@ -1532,8 +1558,9 @@ export async function x402OpenApiDocument(
       title: "AuthiChain x402",
       version: "1.0.0",
       description: health.paidVerify.bound
-        ? "Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body or quote JSON without sealId is HTTP 402. A sealId that is not a UUID is HTTP 400 before payment. Human SKUs are Stripe Payment Links on /pricing."
+        ? "Canonical paid verify is POST /api/v1/agent-verify ($0.05 USDC on Base). sealId must be a UUID. An empty body or quote JSON without sealId is HTTP 402. A sealId that is not a UUID is HTTP 400 before payment. The public demo seal is still a placeholder, so a call that uses it isn't a registered-seal result. Human SKUs are Stripe Payment Links on /pricing."
         : `Canonical paid verify is POST /api/v1/agent-verify. sealId must be a UUID. An empty body or quote JSON without sealId is HTTP 402. A sealId that is not a UUID is HTTP 400 before payment. ${health.paidVerify.detail} Human SKUs are Stripe Payment Links on /pricing.`,
+      contact: { email: "authichain@mail.grokbot.com" },
     },
     servers: [{ url: origin.replace(/\/+$/, "") || "https://authichain.com" }],
     paths: {
