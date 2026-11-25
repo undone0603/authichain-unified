@@ -44,21 +44,50 @@ jobs:
           '
       - name: Install dependencies and embed microsite HTML
         run: |
+          set -euo pipefail
           pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
           node scripts/sync-microsite-packs.mjs
+      - name: Verify Worker receipt and routing behavior
+        working-directory: workers/authichain-com
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
+          pnpm exec vitest run src/dpp-routes.test.ts
+          pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
       - name: Build and identify the Worker candidate
+        id: bundle
         working-directory: workers/authichain-com
         run: |
           set -euo pipefail
           dir="$(mktemp -d "$RUNNER_TEMP/authichain-candidate.XXXXXXXX")"
-          trap 'rm -rf -- "$dir"' EXIT
+          printf 'directory=%s\n' "$dir" >> "$GITHUB_OUTPUT"
           npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --dry-run --outdir "$dir/bundle" --config wrangler.toml
           test -n "$(find "$dir/bundle" -type f -name '*.js' -print -quit)"
-          digest="$(tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$dir/bundle" -cf - . | sha256sum | cut -d ' ' -f 1)"
+          mkdir "$dir/evidence"
+          tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$dir/bundle" -cf "$dir/evidence/worker-bundle.tar" .
+          (cd "$dir/evidence" && sha256sum worker-bundle.tar > SHA256SUMS)
+          digest="$(cut -d ' ' -f 1 "$dir/evidence/SHA256SUMS")"
           {
             echo '### AuthiChain Worker candidate'
             echo "- Source SHA: ${GITHUB_SHA}"
             echo "- Candidate bundle SHA-256 (normalized tar): ${digest}"
             echo '- Intended target: production-cloudflare / authichain-com'
             echo "- Run: ${GITHUB_RUN_ID} (attempt ${GITHUB_RUN_ATTEMPT})"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } > "$dir/evidence/candidate.md"
+          cat "$dir/evidence/candidate.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve exact candidate bytes and receipt
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: authichain-com-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.bundle.outputs.directory }}/evidence/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove local build and evidence files
+        if: always() && steps.bundle.outputs.directory != ''
+        env:
+          CANDIDATE_DIR: ${{ steps.bundle.outputs.directory }}
+        run: |
+          case "$CANDIDATE_DIR" in
+            "$RUNNER_TEMP"/authichain-candidate.*) rm -rf -- "$CANDIDATE_DIR" ;;
+            *) exit 1 ;;
+          esac
