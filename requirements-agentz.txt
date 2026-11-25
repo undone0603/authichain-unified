@@ -98,7 +98,7 @@ mdurl==0.1.2
 multidict==6.7.1
 narwhals==2.22.1
 numpy==2.4.6
-oauthlib==3.3.1
+oauthlib==4.0.1
 ollama==0.6.2
 openai==2.41.1
 orjson==3.11.9
