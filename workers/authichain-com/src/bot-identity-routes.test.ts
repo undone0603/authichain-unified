@@ -154,7 +154,9 @@ describe("GET /agents/agentz (unanchored did:web)", () => {
     expect(html).toContain(
       "What this proves: the public key published at authichain.com"
     );
-    expect(html).toContain("What it does not prove: who operates the agent");
+    expect(html).toContain("Operator proof checked just now.");
+    expect(html).toContain("What it does not prove: whether its output is accurate or safe");
+    expect(html).not.toContain("What it does not prove: who operates the agent");
     expect(html).not.toContain("anchored on Polygon");
     expect(html).not.toContain(STORE_PILOT_POLYGON_TX);
     expect(html).not.toContain(RIDE_AVENTON_BASE_TX);
