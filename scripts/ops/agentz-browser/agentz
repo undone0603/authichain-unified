@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# agentz: terminal front end for the local AgentZ API (authichain-agentz container, 127.0.0.1:8000).
+# Same verbs as "@agentz <verb>" in GitHub comments. AGENT_SECRET is read from the env file
+# and never printed. Windows: agentz.cmd forwards here through WSL.
+set -uo pipefail
+
+API="${AGENTZ_API:-http://127.0.0.1:8000}"
+ENV_FILE="${AGENTZ_ENV_FILE:-$HOME/.config/agentz/env}"
+C=authichain-agentz
+
+die() { echo "agentz: $*" >&2; exit 1; }
+have_jq() { command -v jq >/dev/null 2>&1; }
+
+secret() {
+  [ -r "$ENV_FILE" ] || die "$ENV_FILE not readable"
+  local s; s=$(grep -E '^AGENT_SECRET=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//')
+  [ -n "$s" ] || die "AGENT_SECRET missing in $ENV_FILE"
+  printf '%s' "$s"
+}
+
+# call METHOD PATH [JSON] -> body on stdout; non-2xx -> body on stderr, exit 1
+call() {
+  local m="$1" p="$2" b="${3:-}" out code
+  local args=(-sS -m "${AGENTZ_TIMEOUT:-150}" -X "$m" -H "Authorization: Bearer $(secret)" -w $'\n%{http_code}')
+  [ -n "$b" ] && args+=(-H 'Content-Type: application/json' --data-binary "$b")
+  out=$(curl "${args[@]}" "$API$p") || die "cannot reach $API (is $C running? try: agentz up)"
+  code="${out##*$'\n'}"; out="${out%$'\n'*}"
+  if [[ "$code" == 2* ]]; then printf '%s\n' "$out"; else printf 'HTTP %s %s\n' "$code" "$out" >&2; return 1; fi
+}
+
+pretty() { if have_jq; then jq "${@:-.}"; else python3 -m json.tool; fi; }
+
+usage() {
+  cat <<'EOF'
+agentz - talk to AgentZ from a terminal (same verbs as "@agentz <verb>" in a GitHub comment)
+
+  agentz status                    service, identity, isolated browser, workflow count
+  agentz browse <https-url>        read a public page through the isolated browser
+  agentz workflows [filter]        list workflow ids (optionally filtered)
+  agentz run <id> [k=v ...]        run a workflow in DRY-RUN (k=v become JSON parameters)
+  agentz run <id> --live [k=v ...] run live (asks for confirmation; email/outreach stays owner-gated)
+  agentz results | agents | launch | score | control | identity
+  agentz api <METHOD> <path> [json] raw authenticated API call
+  agentz cli <args...>             python -m agentz.cli inside the container
+  agentz browser up|down|status|test   manage the isolated browser host
+  agentz up | logs                 start the AgentZ container / tail its logs
+
+Env: AGENTZ_API (default http://127.0.0.1:8000), AGENTZ_RAW=1 for unformatted JSON.
+EOF
+}
+
+kv_json() { # k=v ... -> JSON object (values parsed as JSON when valid, else string)
+  python3 - "$@" <<'PY'
+import json, sys
+out = {}
+for a in sys.argv[1:]:
+    if "=" not in a:
+        sys.exit(f"agentz: expected k=v, got {a!r}")
+    k, v = a.split("=", 1)
+    try: out[k] = json.loads(v)
+    except ValueError: out[k] = v
+print(json.dumps(out))
+PY
+}
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  help|-h|--help) usage ;;
+
+  status)
+    printf 'container  : %s\n' "$(docker inspect -f '{{.State.Status}} (up since {{.State.StartedAt}})' $C 2>/dev/null || echo missing)"
+    printf 'health     : %s\n' "$(curl -sS -m 5 "$API/health" 2>&1)"
+    id=$(curl -sS -m 5 -w $'\n%{http_code}' "$API/identity" 2>/dev/null)
+    if [ "${id##*$'\n'}" = 200 ]; then
+      printf 'identity   : %s\n' "$(python3 -c 'import sys,json;d=json.load(sys.stdin);print(" ".join(f"{k}={d[k]}" for k in ("agent_id","possession") if k in d) or "ok")' <<<"${id%$'\n'*}")"
+    else
+      printf 'identity   : unavailable (HTTP %s from /identity)\n' "${id##*$'\n'}"
+    fi
+    if curl -fsS -m 3 http://127.0.0.1:9222/json/version >/dev/null 2>&1; then
+      printf 'browser    : isolated host up (%s)\n' "$(curl -sS -m 3 http://127.0.0.1:9222/json/version | python3 -c 'import sys,json;print(json.load(sys.stdin)["Browser"])')"
+    else
+      printf 'browser    : isolated host DOWN (agentz browser up)\n'
+    fi
+    wf=$(call GET /workflows 2>/dev/null) && printf 'workflows  : %s\n' "$(python3 -c 'import sys,json;print(len(json.load(sys.stdin)["workflows"]))' <<<"$wf")"
+    ;;
+
+  browse|navigate)
+    url="${1:-}"; [ -n "$url" ] || die "usage: agentz browse <https-url>"
+    [[ "$url" == http*://* ]] || url="https://$url"
+    body=$(python3 -c 'import json,sys;print(json.dumps({"url":sys.argv[1]}))' "$url")
+    res=$(call POST /agentz/browser/navigate "$body") || exit 1
+    if [ "${AGENTZ_RAW:-}" = 1 ]; then printf '%s\n' "$res"
+    else python3 -c 'import sys,json;d=json.load(sys.stdin);print("# "+d["url"]+"  (untrusted page content)\n");print(d["snapshot"])' <<<"$res"; fi
+    ;;
+
+  workflows|wf|list)
+    res=$(call GET /workflows) || exit 1
+    AGENTZ_JSON="$res" python3 - "${1:-}" <<'PY'
+import json, os, sys
+f = sys.argv[1].lower()
+for w in sorted(json.loads(os.environ["AGENTZ_JSON"])["workflows"], key=lambda w: w["id"]):
+    if f in (w["id"] + " " + (w.get("title") or "")).lower():
+        print(f'{w["id"]:<40} {w.get("priority") or "":<4} {w.get("title") or ""}')
+PY
+    ;;
+
+  run)
+    id="${1:-}"; [ -n "$id" ] || die "usage: agentz run <workflow-id> [--live] [k=v ...]"; shift
+    live=false; kvs=()
+    for a in "$@"; do [ "$a" = --live ] && live=true || kvs+=("$a"); done
+    payload=$(kv_json "${kvs[@]}") || exit 1
+    if $live; then
+      [ -t 0 ] || die "--live needs an interactive terminal to confirm"
+      read -r -p "Run '$id' LIVE (may send/post/write for real)? type the workflow id to confirm: " ok
+      [ "$ok" = "$id" ] || die "not confirmed"
+      q="mode=confirm&live=true"
+    else
+      q="mode=dry-run"
+    fi
+    res=$(call POST "/workflows/$id/run?$q" "$payload") || exit 1
+    [ "${AGENTZ_RAW:-}" = 1 ] && printf '%s\n' "$res" || pretty <<<"$res"
+    ;;
+
+  results)  call GET /results          | pretty ;;
+  agents)   call GET /agents           | pretty ;;
+  launch)   call GET /launch/state     | pretty ;;
+  score)    call GET /launch/score     | pretty ;;
+  control)  call GET /control-plane/state | pretty ;;
+  identity) curl -sS -m 10 "$API/identity" | pretty ;;
+
+  api)
+    [ $# -ge 2 ] || die "usage: agentz api <METHOD> <path> [json]"
+    call "$1" "$2" "${3:-}" ;;
+
+  cli)
+    docker exec -i $C python -m agentz.cli "$@" ;;
+
+  browser)
+    exec "$HOME/bin/agentz-browser-stack" "${1:-status}" ;;
+
+  up)
+    docker start $C >/dev/null && echo "started $C"; "$HOME/bin/agentz-browser-stack" ensure ;;
+  logs)
+    docker logs --tail "${1:-50}" -f $C ;;
+
+  *) echo "agentz: unknown command '$cmd'" >&2; usage >&2; exit 2 ;;
+esac
