@@ -32,7 +32,11 @@ pretty() { if have_jq; then jq "${@:-.}"; else python3 -m json.tool; fi; }
 
 usage() {
   cat <<'EOF'
-agentz - talk to AgentZ from a terminal (same verbs as "@agentz <verb>" in a GitHub comment)
+agentz (short: z) - talk to AgentZ from a terminal (same verbs as "@agentz <verb>" in a GitHub comment)
+
+  z                        status            z w [filter]     workflows
+  z example.com            browse            z run <id>       dry-run a workflow
+  z "your question"        research          z b|r|s          browse | research | status
 
   agentz status                    service, identity, isolated browser, workflow count
   agentz browse <https-url>        read a public page through the isolated browser
@@ -152,11 +156,17 @@ print(f"read {ok}/{len(results)} sources -> {path}")
 PY
 }
 
-cmd="${1:-help}"; shift || true
+cmd="${1:-status}"; shift || true
+# Shorthand: `z example.com` / `z https://…` browses; `z "a question with spaces"` researches.
+if [[ "$cmd" =~ ^https?:// || "$cmd" =~ ^[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/.*)?$ ]]; then
+  set -- "$cmd" "$@"; cmd=browse
+elif [[ "$cmd" == *" "* ]]; then
+  set -- "$cmd" "$@"; cmd=research
+fi
 case "$cmd" in
   help|-h|--help) usage ;;
 
-  status)
+  status|s)
     printf 'container  : %s\n' "$(docker inspect -f '{{.State.Status}} (up since {{.State.StartedAt}})' $C 2>/dev/null || echo missing)"
     printf 'health     : %s\n' "$(curl -sS -m 5 "$API/health" 2>&1)"
     id=$(curl -sS -m 5 -w $'\n%{http_code}' "$API/identity" 2>/dev/null)
@@ -173,7 +183,7 @@ case "$cmd" in
     wf=$(call GET /workflows 2>/dev/null) && printf 'workflows  : %s\n' "$(python3 -c 'import sys,json;print(len(json.load(sys.stdin)["workflows"]))' <<<"$wf")"
     ;;
 
-  browse|navigate)
+  browse|navigate|b)
     url="${1:-}"; [ -n "$url" ] || die "usage: agentz browse <https-url>"
     [[ "$url" == http*://* ]] || url="https://$url"
     body=$(python3 -c 'import json,sys;print(json.dumps({"url":sys.argv[1]}))' "$url")
@@ -182,7 +192,7 @@ case "$cmd" in
     else python3 -c 'import sys,json;d=json.load(sys.stdin);print("# "+d["url"]+"  (untrusted page content)\n");print(d["snapshot"])' <<<"$res"; fi
     ;;
 
-  workflows|wf|list)
+  workflows|wf|list|w)
     res=$(call GET /workflows) || exit 1
     AGENTZ_JSON="$res" python3 - "${1:-}" <<'PY'
 import json, os, sys
@@ -224,7 +234,7 @@ PY
   cli)
     agentz_cli "$@" ;;
 
-  research)
+  research|r)
     research "$@" ;;
 
   browser)
@@ -235,5 +245,8 @@ PY
   logs)
     docker logs --tail "${1:-50}" -f $C ;;
 
-  *) echo "agentz: unknown command '$cmd'" >&2; usage >&2; exit 2 ;;
+  *)
+    # Unknown word followed by more words = a question (quotes are often lost through wsl.exe).
+    if [ $# -gt 0 ]; then research "$cmd" "$@"
+    else echo "agentz: unknown command '$cmd'" >&2; usage >&2; exit 2; fi ;;
 esac

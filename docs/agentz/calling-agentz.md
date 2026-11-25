@@ -2,6 +2,15 @@
 
 ## Terminal
 
+Short form: **`z`** (Windows `%USERPROFILE%\.local\bin\z.cmd`, WSL `~/bin/z` -> `agentz`).
+
+```
+z                          status
+z example.com              browse (any URL or domain)
+z what is x402 pricing     research (any multi-word input; quotes optional)
+z w launch_                workflows      z run <id>   dry-run      z b|r|s   browse|research|status
+```
+
 `agentz` is on PATH in PowerShell/cmd (`%USERPROFILE%\.local\bin\agentz.cmd`, which forwards to WSL)
 and in WSL (`~/bin/agentz`). It talks to the local AgentZ API on `127.0.0.1:8000` and reads
 `AGENT_SECRET` from `~/.config/agentz/env` without printing it.
