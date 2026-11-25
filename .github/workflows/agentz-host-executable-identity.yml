@@ -31,9 +31,16 @@ jobs:
           test "$(hostname)" = LAPTOP-72MAGTL2
           test "$(uname -m)" = aarch64
           test -x /usr/bin/sudo
-          sudo -n id -u | grep -qx '0'
           python3 -B -c 'import ast,sys; ast.parse(open(sys.argv[1]).read())' scripts/ops/agentz_live_executable_probe.py
-          echo 'PROBE_SOURCE_SHA256='"$(sha256sum scripts/ops/agentz_live_executable_probe.py | cut -d ' ' -f 1)"
+          probe_sha="$(sha256sum scripts/ops/agentz_live_executable_probe.py | cut -d ' ' -f 1)"
+          echo "PROBE_SOURCE_SHA256=$probe_sha"
+          # Restricted authority only: the runner may sudo the owner-installed wrapper,
+          # which runs a root-owned probe copy pinned to this protected-main blob.
+          self_check="$(sudo -n /usr/local/sbin/agentz-host-probe --self-check)"
+          echo "$self_check"
+          grep -qx 'PROBE_UID=0' <<< "$self_check"
+          grep -qx "INSTALLED_PROBE_SHA256=$probe_sha" <<< "$self_check" ||
+            { echo 'HOLD: installed probe differs from protected main; owner reruns scripts/ops/host/install-agentz-host-probe.sh'; exit 1; }
       - name: Hash existing runner isolation marker (no content disclosure)
         shell: bash
         run: |
@@ -51,7 +58,7 @@ jobs:
           # This first probe intentionally returns HOLD when no protected image receipt
           # is provided. Keep its output so process identity is observable even when
           # the following release download is unavailable.
-          if sudo -n env -i PATH=/usr/bin:/bin /usr/bin/python3 -B scripts/ops/agentz_live_executable_probe.py --port 8000; then
+          if sudo -n /usr/local/sbin/agentz-host-probe --baseline; then
             echo 'Unexpected evidence-only probe success without archive inputs'
             exit 1
           else
@@ -91,8 +98,5 @@ jobs:
             .source_sha == $sha and .sha256 == $a
           ' "$tmp/release.json" >/dev/null
           # Drop GitHub token and any other credentials before root-only host probe.
-          sudo -n env -i PATH=/usr/bin:/bin /usr/bin/python3 -B \
-            scripts/ops/agentz_live_executable_probe.py --port 8000 \
-            --archive "$tmp/agentz-linux-arm64.tar.gz" \
-            --release-json "$tmp/release.json" \
-            --github-receipt-sha256 "$pinned_receipt_sha"
+          sudo -n /usr/local/sbin/agentz-host-probe --compare \
+            "$tmp/agentz-linux-arm64.tar.gz" "$tmp/release.json" "$pinned_receipt_sha"
