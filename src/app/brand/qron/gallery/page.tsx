@@ -329,14 +329,14 @@ export default function QRONGallery() {
                   <Users className="w-5 h-5" style={{ color: PURPLE }} />
                 </div>
                 <h3 className="font-bold mb-2">Reseller Program</h3>
-                <p className="text-xs text-zinc-500">30% margin on per-scan pricing for print shops and agencies</p>
+                <p className="text-xs text-zinc-500">30% margin for print shops and agencies</p>
               </div>
               <div>
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${PINK}15`, border: `1px solid ${PINK}30` }}>
                   <TrendingUp className="w-5 h-5" style={{ color: PINK }} />
                 </div>
                 <h3 className="font-bold mb-2">Scan Analytics</h3>
-                <p className="text-xs text-zinc-500">$0.001-0.01 per scan for SaaS metering and analytics</p>
+                <p className="text-xs text-zinc-500">SaaS dashboards for scan analytics</p>
               </div>
               <div>
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: '#8b5cf6' + '15', border: `1px solid #8b5cf630` }}>
