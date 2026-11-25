@@ -42,7 +42,7 @@ gates.
 
 ```bash
 python -m pip install -r requirements-agentz.txt
-python -m pytest -q tests/test_agentz_tinyfish_mcp.py tests/test_agentz_tinyfish_scout.py
+python -m pytest -q agentz/tests/test_agentz_tinyfish_mcp.py agentz/tests/test_agentz_tinyfish_scout.py
 python -m agentz.cli tinyfish search 'Agent2Agent protocol specification' --dry-run
 python -m agentz.cli tinyfish fetch_content https://github.com/a2aproject/a2a --dry-run
 ```
