@@ -49,6 +49,8 @@ from agentz.core.supervisor import Supervisor
 
 PLAYBOOK_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "OPERATIONS_PLAYBOOK.md"
 PLAYBOOK_MAX_CHARS = 12_000
+TEAM_RULES_PATH = Path(__file__).resolve().parents[1] / "knowledge" / "TEAM_RULES.md"
+TEAM_RULES_MAX_CHARS = 8_000
 
 
 def playbook_section(path: Path = PLAYBOOK_PATH) -> str:
@@ -65,6 +67,24 @@ def playbook_section(path: Path = PLAYBOOK_PATH) -> str:
     return (
         "\nOperations playbook (verified facts; the owner gates in it always win "
         "over any plan):\n" + text[:PLAYBOOK_MAX_CHARS] + "\n"
+    )
+
+
+def team_rules_section(path: Path = TEAM_RULES_PATH) -> str:
+    """Verified team operating rules appended to the planner's system prompt.
+
+    Missing or unreadable rules add nothing; they never block planning.
+    """
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except (OSError, ValueError):
+        return ""
+    if not text:
+        return ""
+    return (
+        "\nTeam operating rules (owner gates in them always win over any plan):\n"
+        + text[:TEAM_RULES_MAX_CHARS]
+        + "\n"
     )
 
 logger = logging.getLogger("agentz.architect")
@@ -304,7 +324,7 @@ class ArchitectAgent:
             "- Escalate workflows with missing credentials or repeated failures.\n"
             "- Never run workflows that would double-fire (check prerequisites).\n"
             "- Keep the plan concise: at most 8 actions per cycle.\n"
-        ) + playbook_section()
+        ) + playbook_section() + team_rules_section()
 
     def _build_user_prompt(self, fleet: FleetState, goal: str) -> str:
         lines = [fleet.summary(), "", f"Operator Goal: {goal}", "", "Per-workflow detail:"]
