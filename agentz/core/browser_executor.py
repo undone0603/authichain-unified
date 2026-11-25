@@ -24,6 +24,15 @@ _BROWSER_ENV_KEYS = frozenset({
     "PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TMPDIR",
     "XDG_RUNTIME_DIR", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME",
 })
+# Where the browser runs: the fail-closed AGENTZ_BROWSER_BIN wrapper
+# (agentz/runtime/agentz-browser) picks the local isolated CDP host or a cloud
+# browser provider from these. They are browser-provider settings only; no other
+# credentials are passed through.
+_BROWSER_CONNECTION_KEYS = frozenset({
+    "AGENTZ_BROWSER_CDP_URL",
+    "BROWSERBASE_API_KEY", "BROWSERBASE_PROJECT_ID",
+    "BROWSER_USE_API_KEY",
+})
 
 
 def execute_browser_task(task: str, *, timeout: int = 60) -> dict:
@@ -48,7 +57,7 @@ def execute_browser_task(task: str, *, timeout: int = 60) -> dict:
     # intentionally invoked with a fixed argv, never a shell or user command.
     session = "agentz-" + run_id
     env = {key: value for key, value in os.environ.items()
-           if key in _BROWSER_ENV_KEYS}
+           if key in _BROWSER_ENV_KEYS or key in _BROWSER_CONNECTION_KEYS}
     env["AGENT_BROWSER_SESSION"] = session
     def call(*args):
         return subprocess.run(
