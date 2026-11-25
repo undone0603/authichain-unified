@@ -5,7 +5,7 @@
 # Regenerate only from a known-good runtime venv; do not loosen to >= ranges.
 aiofiles==25.1.0
 aiohappyeyeballs==2.6.2
-aiohttp==3.14.1
+aiohttp==3.14.4
 aiosignal==1.4.0
 altair==6.2.1
 annotated-doc==0.0.4
@@ -184,5 +184,5 @@ wcwidth==0.8.1
 web3==7.16.0
 websockets==15.0.1
 xxhash==3.7.0
-yarl==1.24.2
+yarl==1.25.1
 zstandard==0.25.0
