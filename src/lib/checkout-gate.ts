@@ -28,6 +28,14 @@ import {
 } from "./growth/emit";
 import type { GrowthEvent } from "./growth/loops";
 import { CHECKOUT_REDIRECT_HEADERS, pickCheckoutEmail } from "./checkout-email";
+
+/** True for addresses on reserved test domains (RFC 2606 / RFC 6761) that cannot be real customers. */
+export function isReservedTestEmail(email: string | null | undefined): boolean {
+  const domain = String(email || "").toLowerCase().split("@")[1] || "";
+  if (!domain) return false;
+  if (["example.com", "example.org", "example.net"].includes(domain)) return true;
+  return /\.(test|example|invalid|localhost)$/.test(domain) || ["test", "example", "invalid", "localhost"].includes(domain);
+}
 import {
   DPP_OFFER_KEY,
   GATED_CHECKOUT_ORIGIN,
@@ -486,6 +494,9 @@ export function buildGatedSessionBody(opts: {
     source,
     checkout_gate: "confirm_post",
   };
+  // Reserved test domains (RFC 2606/6761) can never be real buyers: tag them so
+  // funnel reports can exclude monitors such as the daily watchdog@example.com probe.
+  if (isReservedTestEmail(email)) meta.synthetic = "reserved_test_domain";
   if (isDpp) meta.offer = DPP_OFFER_KEY;
   for (const k of [
     "utm_source",

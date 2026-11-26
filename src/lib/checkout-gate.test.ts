@@ -947,3 +947,16 @@ describe("wording sweep 2026-10-16: gap report and gov pilot gated SKUs", () => 
     expect(html).toContain("$950");
   });
 });
+
+
+describe("synthetic session tagging", () => {
+  it("recognises reserved test domains only", async () => {
+    const { isReservedTestEmail } = await import("./checkout-gate");
+    for (const e of ["watchdog@example.com", "a@EXAMPLE.org", "x@shop.test", "y@foo.invalid", "z@example.net"]) {
+      expect(isReservedTestEmail(e)).toBe(true);
+    }
+    for (const e of ["buyer@acme.com", "ops@example-corp.com", "me@testing.io", "", null, undefined]) {
+      expect(isReservedTestEmail(e as string)).toBe(false);
+    }
+  });
+});
