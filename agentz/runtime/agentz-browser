@@ -1,0 +1,23 @@
+#!/bin/sh
+# AGENTZ_BROWSER_BIN for AgentZ: agent-browser pinned to a network-isolated browser.
+# Selection is fail-closed and never launches a local (non-isolated) Chromium:
+#   1. local isolated host (agentz-browser-stack) at $AGENTZ_BROWSER_CDP_URL, default http://127.0.0.1:9222
+#   2. Browserbase      if BROWSERBASE_API_KEY and BROWSERBASE_PROJECT_ID are set
+#   3. Browser Use      if BROWSER_USE_API_KEY is set
+#   otherwise exit 3.
+# Cloud providers run off-network, so they can't reach the LAN either.
+BIN="${AGENTZ_AGENT_BROWSER_REAL:-/opt/agentz-browser/agent-browser}"
+CDP="${AGENTZ_BROWSER_CDP_URL:-http://127.0.0.1:9222}"
+unset AGENT_BROWSER_CDP AGENT_BROWSER_PROVIDER AGENT_BROWSER_AUTO_CONNECT AGENT_BROWSER_EXECUTABLE_PATH
+
+if python3 -c "import sys,urllib.request; urllib.request.urlopen(sys.argv[1]+'/json/version', timeout=3)" "$CDP" 2>/dev/null; then
+  export AGENT_BROWSER_CDP="$CDP"
+elif [ -n "${BROWSERBASE_API_KEY:-}" ] && [ -n "${BROWSERBASE_PROJECT_ID:-}" ]; then
+  export AGENT_BROWSER_PROVIDER=browserbase
+elif [ -n "${BROWSER_USE_API_KEY:-}" ]; then
+  export AGENT_BROWSER_PROVIDER=browseruse
+else
+  echo "agentz-browser: no isolated browser available (local host down, no cloud key)" >&2
+  exit 3
+fi
+exec "$BIN" "$@"
