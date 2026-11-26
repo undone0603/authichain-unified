@@ -7,7 +7,7 @@ name: AgentZ — @agentz comment commands
 # Safety:
 # - Only the repository OWNER can trigger it; the job-level `if` is evaluated before any runner
 #   or secret is involved, so other people's comments never reach AgentZ.
-# - GitHub-hosted runner, no checkout: nothing from the comment or a PR branch is executed.
+# - Self-hosted WSL runner, no checkout: nothing from the comment or a PR branch is executed.
 # - The comment body is parsed in Python from an env var, never interpolated into the shell.
 # - `run` is always dry-run. Live runs stay with the "AgentZ — Manual post" dispatch workflow.
 # - `browse` output is public page content fetched by the network-isolated browser; it is
@@ -33,7 +33,11 @@ jobs:
     if: >-
       github.event.comment.author_association == 'OWNER' &&
       startsWith(github.event.comment.body, '@agentz')
-    runs-on: ubuntu-latest
+    # GitHub-hosted runners are unavailable (account billing lock), so this uses the
+    # self-hosted WSL runner like agentz-manual-post.yml. Safe for a comment trigger:
+    # the OWNER-only `if` above is evaluated before a runner is assigned, nothing is
+    # checked out, and the comment is parsed in Python from an env var.
+    runs-on: [self-hosted, Linux, ARM64, authichain-wsl]
     timeout-minutes: 10
     env:
       AGENT_SECRET: ${{ secrets.AGENT_SECRET }}

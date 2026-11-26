@@ -56,7 +56,7 @@ starts with `@agentz` runs one of:
 | `@agentz help` | command table |
 
 Only the repository OWNER can trigger it (the job `if` is checked before a runner or secret is
-used). It runs on a GitHub-hosted runner, checks nothing out, parses the comment in Python, and
+used). It runs on the self-hosted WSL runner, checks nothing out, parses the comment in Python, and
 calls `https://agentz.authichain.com` with `AGENT_SECRET` plus the Cloudflare Access service token.
 Live runs are not available from comments; use *AgentZ — Manual post*.
 
