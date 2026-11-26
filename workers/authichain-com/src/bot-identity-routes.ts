@@ -7,6 +7,7 @@
  *   /agents/<slug>/did.json       did:web document (did:web:authichain.com:agents:<slug>)
  *   /agents/<slug>/agent-card.json  A2A-style agent card (identity only, no task endpoint)
  *   /agents/<slug>/identity.json  the two signed records
+ *   /agents/<slug>/operator-proof.jws  operator key-possession proof (when one exists)
  *   /.well-known/did.json         did:web:authichain.com (the agent issuer key)
  *   /.well-known/agent-card.json  identity-only card for the AuthiChain agent team
  *   /.well-known/agent.json       same card, at the older path
@@ -23,6 +24,7 @@
 import { verifySubmitted } from "../../authichain-verify-worker/src/protocol-verify.mjs";
 import { BOT_ANCHORS } from "./bot-anchors";
 import { BOT_IDENTITIES } from "./bot-identities";
+import { checkOperatorProof, OPERATOR_PROOFS } from "./bot-operator-proofs";
 
 type Bot = (typeof BOT_IDENTITIES)["bots"][number];
 const ORIGIN = "https://authichain.com";
@@ -276,6 +278,15 @@ export function renderBotPage(bot: Bot): string {
   const signedBy = isSelfIssued(bot)
     ? `<dt>Signed by</dt><dd><code>${esc(bot.didKey)}</code> (this agent's own key; this record is self-issued, not signed by the AuthiChain agent issuer)</dd>`
     : `<dt>Signed by</dt><dd><code>${esc(BOT_IDENTITIES.issuer.didKey)}</code> (AuthiChain agent issuer, <a href="/.well-known/did.json">did:web:authichain.com</a>)</dd>`;
+  const op = checkOperatorProof(bot);
+  const operator = !op
+    ? ""
+    : op.ok
+      ? `<dt>Operator</dt><dd><span class="ok">Operator proof checked just now.</span> A statement signed by this agent's key on ${esc(op.issuedAt ?? "")} names GitHub account <a href="https://github.com/${esc(op.operatorGithub ?? "")}">${esc(op.operatorGithub ?? "")}</a> and ${esc(op.operatorDomain ?? "")} as its operator, and that account <a href="${esc(op.gist)}">published it</a>. <a href="/agents/${bot.slug}/operator-proof.jws">operator-proof.jws</a> (EdDSA JWS; verifier in the gist).</dd>`
+      : `<dt>Operator</dt><dd class="bad">Operator proof failed its check just now (${esc(op.reasons.join(", "))}). Do not rely on it.</dd>`;
+  const notProven = op?.ok
+    ? "What it does not prove: whether its output is accurate or safe, or that any third party endorses it. The operator line above rests on the agent's key and the operator's GitHub account, not on any third party."
+    : "What it does not prove: who operates the agent, whether its output is accurate or safe, or that any third party endorses it.";
   const related =
     bot.slug === "agentz"
       ? `<p>Related: a scoped Ride Aventon presentation artifact lives at <a href="/agent/agentz">/agent/agentz</a> (Base data-only anchor; not this Ed25519 identity record).</p>`
@@ -291,9 +302,10 @@ ${signedBy}
 <dt>Checks</dt><dd>Issuer record: ${esc(c.record)} · Bot key statement: ${esc(c.selfStatement)} · Key matches: ${c.keyMatches ? "yes" : "no"} · Issuer matches: ${c.issuerMatches ? "yes" : "no"}</dd>
 <dt>Valid</dt><dd>${esc(bot.record.validFrom)} to ${esc(bot.record.validUntil)}</dd>
 ${blockchain}
+${operator}
 <dt>Files</dt><dd><a href="/agents/${bot.slug}/did.json">DID document</a> · <a href="/agents/${bot.slug}/agent-card.json">Agent card</a> · <a href="/agents/${bot.slug}/identity.json">Signed records</a></dd></dl>
 ${verifyHelp}
-<p>What this proves: the public key published at authichain.com matches the signatures on this agent's identity records. What it does not prove: who operates the agent, whether its output is accurate or safe, or that any third party endorses it.</p>
+<p>What this proves: the public key published at authichain.com matches the signatures on this agent's identity records. ${notProven}</p>
 ${related}<p><a href="/agents">All AuthiChain agents</a></p>`
   );
 }
@@ -342,7 +354,7 @@ export function tryHandleBotIdentity(request: Request): Response | null {
     });
   }
   const m = path.match(
-    /^\/agents\/([a-z0-9-]+)(?:\/(did\.json|agent-card\.json|identity\.json))?$/
+    /^\/agents\/([a-z0-9-]+)(?:\/(did\.json|agent-card\.json|identity\.json|operator-proof\.jws))?$/
   );
   if (!m) return null;
   const bot = findBot(m[1]);
@@ -352,6 +364,18 @@ export function tryHandleBotIdentity(request: Request): Response | null {
       "Content-Type": "application/did+json",
     });
   if (m[2] === "agent-card.json") return json(botAgentCard(bot));
+  if (m[2] === "operator-proof.jws") {
+    const proof = OPERATOR_PROOFS[bot.slug];
+    if (!proof) return null;
+    return new Response(`${proof.jws}\n`, {
+      headers: {
+        "Content-Type": "application/jose; charset=utf-8",
+        "Cache-Control": "public, max-age=300",
+        "Access-Control-Allow-Origin": "*",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
   if (m[2] === "identity.json") {
     return json({
       record: bot.record,

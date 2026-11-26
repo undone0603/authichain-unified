@@ -78,6 +78,39 @@ class BrowserExecutorTests(unittest.TestCase):
             self.assertEqual(calls[0][2], "https://github.com/undone0603/authichain-unified/actions/workflows/deploy-authichain-com.yml")
             self.assertEqual(Path(result["evidence_path"]).stat().st_mode & 0o777, 0o600)
 
+    def test_browser_connection_settings_pass_but_other_secrets_do_not(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = Path(tmp) / "agent-browser"
+            binary.write_text("#!/bin/sh\nexit 0\n")
+            binary.chmod(0o700)
+            evidence = Path(tmp) / "evidence"
+            evidence.mkdir()
+            envs = []
+            def fake_run(argv, **kwargs):
+                envs.append(kwargs["env"])
+                class Result:
+                    returncode = 0
+                    stderr = ""
+                    stdout = "mock snapshot"
+                return Result()
+            with patch.dict(os.environ, {
+                "AGENTZ_BROWSER_BIN": str(binary),
+                "AGENTZ_BROWSER_EVIDENCE_DIR": str(evidence),
+                "AGENTZ_BROWSER_CDP_URL": "http://127.0.0.1:9333",
+                "BROWSERBASE_API_KEY": "bb-key", "BROWSERBASE_PROJECT_ID": "bb-proj",
+                "BROWSER_USE_API_KEY": "bu-key",
+                "AGENT_SECRET": "must-not-pass", "STRIPE_SECRET_KEY": "must-not-pass",
+                "AGENTZ_GITHUB_CODE_TOKEN": "must-not-pass",
+            }), patch("agentz.core.browser_executor.subprocess.run", side_effect=fake_run):
+                execute_browser_task("github-workflow-inspect")
+            for env in envs:
+                self.assertEqual(env["AGENTZ_BROWSER_CDP_URL"], "http://127.0.0.1:9333")
+                self.assertEqual(env["BROWSERBASE_API_KEY"], "bb-key")
+                self.assertEqual(env["BROWSERBASE_PROJECT_ID"], "bb-proj")
+                self.assertEqual(env["BROWSER_USE_API_KEY"], "bu-key")
+                for secret in ("AGENT_SECRET", "STRIPE_SECRET_KEY", "AGENTZ_GITHUB_CODE_TOKEN"):
+                    self.assertNotIn(secret, env)
+
 
 if __name__ == "__main__":
     unittest.main()
