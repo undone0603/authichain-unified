@@ -52,6 +52,7 @@ starts with `@agentz` runs one of:
 | `@agentz status` | health and workflow count |
 | `@agentz workflows [filter]` | workflow list |
 | `@agentz browse <https-url>` | page snapshot from the isolated browser (collapsed, marked untrusted) |
+| `@agentz research <question>` | top 3 search results read through the isolated browser, cited (needs the `/agentz/research` endpoint) |
 | `@agentz run <workflow_id> [k=v ...]` | **dry-run only** |
 | `@agentz help` | command table |
 

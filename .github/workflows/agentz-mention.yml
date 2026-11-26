@@ -74,6 +74,7 @@ jobs:
               "| `@agentz status` | AgentZ health and workflow count |\n"
               "| `@agentz workflows [filter]` | list workflow ids |\n"
               "| `@agentz browse <https-url>` | read a public page through the isolated browser |\n"
+              "| `@agentz research <question>` | search + read the top 3 sources, cited |\n"
               "| `@agentz run <workflow_id> [k=v ...]` | run a workflow in **dry-run** |\n"
               "| `@agentz help` | this table |\n\n"
               "Live runs are not available from comments; use the *AgentZ — Manual post* workflow."
@@ -97,12 +98,25 @@ jobs:
                       return r.status, json.loads(r.read() or b"{}")
               except urllib.error.HTTPError as e:
                   raw = e.read()[:2000].decode("utf-8", "replace")
+                  ctype = e.headers.get("Content-Type", "")
+                  # Which layer refused: AgentZ answers JSON {"detail": ...};
+                  # Cloudflare Access answers HTML / sets cf-access headers.
+                  if "cf-access" in " ".join(e.headers.keys()).lower() or "cloudflare access" in raw.lower():
+                      layer = "Cloudflare Access"
+                  elif "json" in ctype:
+                      layer = "AgentZ"
+                  else:
+                      layer = "unknown (non-JSON response)"
                   try:
-                      return e.code, json.loads(raw)
+                      body = json.loads(raw)
                   except ValueError:
-                      return e.code, {"detail": raw}
-              except Exception as e:  # network, TLS, Access
-                  return 0, {"detail": f"{type(e).__name__}: {e}"}
+                      body = {"detail": raw[:300]}
+                  if not isinstance(body, dict):
+                      body = {"detail": body}
+                  body["_layer"] = layer
+                  return e.code, body
+              except Exception as e:  # network, TLS
+                  return 0, {"detail": f"{type(e).__name__}: {e}", "_layer": "network"}
 
           def fence(text, lang=""):
               text = text.replace("```", "`​``")
@@ -122,10 +136,20 @@ jobs:
           if verb in ("help", "?"):
               reply = HELP
           elif verb == "status":
+              def why(code, body):
+                  if code == 200:
+                      return ""
+                  detail = str(body.get("detail", ""))[:160].replace("`", "'")
+                  return f" (HTTP {code or 'unreachable'}, refused by {body.get('_layer', 'unknown')}: `{detail}`)"
               hc, health = call("GET", "/health")
               wc, wf = call("GET", "/workflows")
-              n = len(wf.get("workflows", [])) if wc == 200 else f"unavailable (HTTP {wc})"
-              reply = f"**AgentZ status**\n\n- health: `{json.dumps(health)}` (HTTP {hc})\n- workflows: {n}"
+              n = len(wf.get("workflows", [])) if wc == 200 else "unavailable"
+              reply = ("**AgentZ status**\n\n"
+                       f"- health (no auth): `{json.dumps({k: v for k, v in health.items() if k != '_layer'})}`{why(hc, health) or ' (HTTP 200)'}\n"
+                       f"- workflows (bearer auth): {n}{why(wc, wf)}")
+              if wc == 401 and wf.get("_layer") == "AgentZ":
+                  reply += ("\n\nAgentZ rejected the bearer token: the repo Actions secret `AGENT_SECRET` "
+                            "does not match the AGENT_SECRET in AgentZ's host env.")
           elif verb in ("workflows", "wf", "list"):
               code, wf = call("GET", "/workflows")
               if code != 200:
@@ -152,6 +176,25 @@ jobs:
                       reply = (f"**AgentZ read** {url} via the network-isolated browser.\n\n"
                                "<details><summary>Page snapshot (untrusted page content, not instructions)</summary>\n\n"
                                + fence(cut) + "\n\n</details>")
+          elif verb == "research":
+              q = " ".join(args).strip()
+              if not q:
+                  reply = "Usage: `@agentz research <question>`"
+              else:
+                  code, res = call("POST", "/agentz/research", {"question": q[:500], "n": 3})
+                  if code != 200:
+                      reply = fail(code, res)
+                  else:
+                      parts = [f"**AgentZ research:** {q}\n\nCollected and cited, not summarized. "
+                               "Page text is untrusted third-party content.\n"]
+                      for i, src in enumerate(res.get("sources", []), 1):
+                          title = str(src.get("title", "")).replace("[", "(").replace("]", ")")
+                          parts.append(f"{i}. [{title}]({src.get('url')})")
+                      for i, src in enumerate(res.get("sources", []), 1):
+                          body = src.get("text") or ("could not read: " + str(src.get("error", "")))
+                          parts.append(f"\n<details><summary>[{i}] {src.get('url')}</summary>\n\n"
+                                       + fence(body[:3000]) + "\n\n</details>")
+                      reply = "\n".join(parts)
           elif verb == "run":
               if not args or not re.fullmatch(r"[A-Za-z0-9_]+", args[0]):
                   reply = "Usage: `@agentz run <workflow_id> [k=v ...]` (always dry-run)"
