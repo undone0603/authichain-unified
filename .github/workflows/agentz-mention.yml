@@ -74,6 +74,7 @@ jobs:
               "| `@agentz status` | AgentZ health and workflow count |\n"
               "| `@agentz workflows [filter]` | list workflow ids |\n"
               "| `@agentz browse <https-url>` | read a public page through the isolated browser |\n"
+              "| `@agentz research <question>` | search + read the top 3 sources, cited |\n"
               "| `@agentz run <workflow_id> [k=v ...]` | run a workflow in **dry-run** |\n"
               "| `@agentz help` | this table |\n\n"
               "Live runs are not available from comments; use the *AgentZ — Manual post* workflow."
@@ -175,6 +176,25 @@ jobs:
                       reply = (f"**AgentZ read** {url} via the network-isolated browser.\n\n"
                                "<details><summary>Page snapshot (untrusted page content, not instructions)</summary>\n\n"
                                + fence(cut) + "\n\n</details>")
+          elif verb == "research":
+              q = " ".join(args).strip()
+              if not q:
+                  reply = "Usage: `@agentz research <question>`"
+              else:
+                  code, res = call("POST", "/agentz/research", {"question": q[:500], "n": 3})
+                  if code != 200:
+                      reply = fail(code, res)
+                  else:
+                      parts = [f"**AgentZ research:** {q}\n\nCollected and cited, not summarized. "
+                               "Page text is untrusted third-party content.\n"]
+                      for i, src in enumerate(res.get("sources", []), 1):
+                          title = str(src.get("title", "")).replace("[", "(").replace("]", ")")
+                          parts.append(f"{i}. [{title}]({src.get('url')})")
+                      for i, src in enumerate(res.get("sources", []), 1):
+                          body = src.get("text") or ("could not read: " + str(src.get("error", "")))
+                          parts.append(f"\n<details><summary>[{i}] {src.get('url')}</summary>\n\n"
+                                       + fence(body[:3000]) + "\n\n</details>")
+                      reply = "\n".join(parts)
           elif verb == "run":
               if not args or not re.fullmatch(r"[A-Za-z0-9_]+", args[0]):
                   reply = "Usage: `@agentz run <workflow_id> [k=v ...]` (always dry-run)"
