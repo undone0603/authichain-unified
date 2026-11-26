@@ -2095,6 +2095,7 @@ app.get("*", async c => {
 });
 
 export { RateLimiter } from "./rate-limiter";
+export { L402Claims } from "./l402-claims";
 
 // A single hourly cron trigger fans out to the ten cleared GROUP A jobs — the
 // account is capped at five cron triggers, so ten separate schedules were never

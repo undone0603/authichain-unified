@@ -269,7 +269,6 @@ async function l402Verify(
     tier,
     bodyText: await c.req.raw.text(),
     env: c.env,
-    replayStore: scopedReplayStore(c.env?.X402_REPLAY_KV, "edge-router"),
   });
   if (decision.action !== "answer") {
     return c.json({ error: "l402_unexpected_decision" }, 500, NO_STORE);

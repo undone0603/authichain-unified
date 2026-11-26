@@ -2,15 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import { registerX402Routes } from "./x402-routes";
 import { l402TestBackend } from "../src/lib/l402-signals";
-
-function kvStub() {
-  const m = new Map<string, string>();
-  return {
-    get: async (k: string) => m.get(k) ?? null,
-    put: async (k: string, v: string) => void m.set(k, v),
-    delete: async (k: string) => void m.delete(k),
-  };
-}
+import { fakeClaimsNamespace } from "./l402-claims.fakes";
 
 function app() {
   const hono = new Hono();
@@ -29,7 +21,7 @@ function l402Env(extra: Record<string, unknown> = {}) {
     L402_BTC_USD_CENTS: "9000000",
     SUPABASE_URL: "https://registry.example.test",
     SUPABASE_SERVICE_ROLE_KEY: "service-key-for-tests",
-    X402_REPLAY_KV: kvStub(),
+    L402_CLAIMS: fakeClaimsNamespace(),
     ...extra,
   };
 }
@@ -74,6 +66,14 @@ describe("L402 off (the production default today)", () => {
     expect(await res.json()).toMatchObject({ error: "l402_not_enabled", rail: "lightning" });
   });
 
+  it("stays off without the L402_CLAIMS Durable Object (no racy fallback)", async () => {
+    process.env.X402_PAY_TO = PAY_TO;
+    const env = l402Env({ L402_CLAIMS: undefined });
+    const res = await app().request("/api/x402?tier=ping", { method: "POST", body: "{}" }, env);
+    expect(res.status).toBe(402);
+    expect(res.headers.get("www-authenticate")).toBeNull();
+  });
+
   it("stays off with L402_BACKEND=test outside a test runtime", async () => {
     process.env.X402_PAY_TO = PAY_TO;
     const env = l402Env({ NODE_ENV: "production" });
@@ -113,6 +113,33 @@ describe("L402 on (test backend, no money)", () => {
 
     const again = await app().request("/api/x402?tier=ping", init, env);
     expect(again.status).toBe(409);
+  });
+
+  it("serves one of ten simultaneous redemptions of the same token; the rest are 409", async () => {
+    const env = l402Env();
+    const { authorization } = await payFor("/api/x402?tier=ping", env);
+    const init = { method: "POST", body: "{}", headers: { Authorization: authorization } };
+    const statuses = (
+      await Promise.all(Array.from({ length: 10 }, () => app().request("/api/x402?tier=ping", init, env)))
+    ).map(r => r.status);
+    expect(statuses.filter(s => s === 200)).toHaveLength(1);
+    expect(statuses.filter(s => s === 409)).toHaveLength(9);
+  });
+
+  it("answers 503 without serving when the claims store cannot be reached", async () => {
+    const broken = {
+      idFromName: (n: string) => n,
+      get: () => ({ fetch: async () => { throw new Error("do unavailable"); } }),
+    };
+    const env = l402Env({ L402_CLAIMS: broken });
+    const { authorization } = await payFor("/api/x402?tier=ping", env);
+    const res = await app().request(
+      "/api/x402?tier=ping",
+      { method: "POST", body: "{}", headers: { Authorization: authorization } },
+      env
+    );
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ error: "l402_claims_unavailable", retry_with_same_token: true });
   });
 
   it("works without an x402 payTo: the rails are independent", async () => {
