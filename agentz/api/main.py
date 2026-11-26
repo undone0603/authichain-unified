@@ -471,12 +471,13 @@ class NotaryInput(BaseModel):
     sha256: str
 
 
-NOTARY_PAID_RESOURCE = "/agentz/notary/paid"
-
-
 @app.post("/agentz/notary", dependencies=[Depends(verify_token)], tags=["AgentZ Notary"])
 async def api_agentz_notary(data: NotaryInput):
-    """Operator stamp: sign a SHA-256 with AgentZ's key and anchor it via OpenTimestamps."""
+    """Operator stamp: sign a SHA-256 with AgentZ's key and anchor it via OpenTimestamps.
+
+    The public paid stamp is sold by the edge worker over Lightning (POST /api/notary,
+    docs/strategy/LIGHTNING_L402.md), which calls this endpoint with the operator token.
+    """
     from agentz.core.notary import notarize
     try:
         return await run_in_threadpool(notarize, data.sha256)
@@ -486,56 +487,6 @@ async def api_agentz_notary(data: NotaryInput):
         raise HTTPException(status_code=503, detail=str(exc))
     except (RuntimeError, OSError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)[:300])
-
-
-@app.post("/agentz/notary/paid", tags=["AgentZ Notary"])
-async def api_agentz_notary_paid(data: NotaryInput, request: Request):
-    """Public stamp sold over Lightning (L402), $0.05 at the live BTC price.
-
-    503 l402_not_enabled until the owner picks a Lightning backend
-    (docs/strategy/LIGHTNING_L402.md). One token buys one stamp.
-    """
-    from fastapi.responses import JSONResponse
-    from agentz.core import l402
-    from agentz.core.notary import NOTARY_PRICE_USD, notarize
-
-    cfg = l402.config()
-    if cfg is None:
-        return JSONResponse({"error": "l402_not_enabled", "rail": "lightning"}, status_code=503)
-
-    def payment_required(error: str) -> JSONResponse:
-        ch = l402.challenge(cfg, service="notary", capability="stamp", resource=NOTARY_PAID_RESOURCE,
-                            price_atomic_usd=l402.usd_to_atomic(NOTARY_PRICE_USD))
-        if ch is None:
-            return JSONResponse({"error": "btc_price_unavailable", "rail": "lightning"}, status_code=503)
-        return JSONResponse({"error": error, "rails": ["lightning"], "sats": ch["sats"]}, status_code=402,
-                            headers={"WWW-Authenticate": ch["header"], "Cache-Control": "no-store"})
-
-    auth = request.headers.get("authorization", "")
-    if not l402.is_l402_authorization(auth):
-        return payment_required("payment_required")
-    import time
-    verdict = l402.verify(auth, root_key=cfg.root_key, service="notary", capability="stamp",
-                          resource=NOTARY_PAID_RESOURCE, now_seconds=int(time.time()))
-    if not verdict["ok"]:
-        return payment_required(str(verdict["reason"]))
-    claims = l402.FileClaims()
-    if not claims.claim(verdict["payment_hash"]):
-        return JSONResponse({"error": "replay_rejected", "rail": "lightning"}, status_code=409)
-    paid = {"rail": "lightning", "payment_hash": verdict["payment_hash"],
-            "amount_msat": str(verdict["price_msat"])}
-    try:
-        return await run_in_threadpool(lambda: notarize(data.sha256, paid=paid))
-    except ValueError as exc:
-        claims.release(verdict["payment_hash"])
-        raise HTTPException(status_code=400, detail=str(exc))
-    except (PermissionError, RuntimeError, OSError) as exc:
-        claims.release(verdict["payment_hash"])
-        return JSONResponse({"error": str(exc)[:300], "retry_with_same_token": True}, status_code=503)
-    except Exception as exc:  # noqa: BLE001 - a paid token must never be left spent without a stamp
-        claims.release(verdict["payment_hash"])
-        return JSONResponse({"error": "notary_failed", "detail": type(exc).__name__,
-                             "retry_with_same_token": True}, status_code=503)
 
 
 class ResearchInput(BaseModel):

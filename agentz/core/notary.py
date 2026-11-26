@@ -14,8 +14,8 @@ the official client (`ots upgrade` / `ots verify`), with no AgentZ involvement.
 Each proof's sha256 is inside the signed record, so a proof can't be swapped.
 
 The file itself never reaches AgentZ: callers send only its SHA-256.
-Selling stamps over Lightning (L402) is in agentz/api/main.py and stays off
-until the owner chooses a Lightning backend (docs/strategy/LIGHTNING_L402.md).
+The public paid stamp is sold over Lightning by the edge worker (POST /api/notary),
+which calls the operator endpoint here; see docs/strategy/LIGHTNING_L402.md.
 """
 from __future__ import annotations
 
@@ -44,7 +44,6 @@ MAX_CALENDAR_RESPONSE = 10_000
 ISSUER = "did:web:authichain.com:agents:agentz"
 KID = ISSUER + "#key-1"
 JWS_TYP = "agentz-notary+jws"
-NOTARY_PRICE_USD = 0.05
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -203,7 +202,7 @@ def sign_record(payload: Dict[str, Any], key_pem: bytes,
 def notarize(sha256_hex: str, *, key_pem: Optional[bytes] = None,
              expected_did_key: Optional[str] = None,
              calendars: Iterable[str] = CALENDARS, opener=urllib.request.urlopen,
-             now: Optional[datetime] = None, paid: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+             now: Optional[datetime] = None) -> Dict[str, Any]:
     """Sign and anchor one SHA-256. Raises ValueError (bad input), RuntimeError (no calendar)."""
     digest_hex = (sha256_hex or "").strip().lower()
     if not _SHA256.match(digest_hex):
@@ -231,8 +230,6 @@ def notarize(sha256_hex: str, *, key_pem: Optional[bytes] = None,
                      "status": "pending", "ots_sha256": p["ots_sha256"]} for p in accepted],
         "claims": "AgentZ saw this SHA-256 at issued_at. Nothing about the file's content or origin.",
     }
-    if paid:
-        payload["paid"] = paid
     return {
         "record": payload,
         "jws": sign_record(payload, key_pem, expected_did_key),

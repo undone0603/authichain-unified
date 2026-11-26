@@ -1,4 +1,4 @@
-"""AgentZ notary: signed SHA-256 records, OpenTimestamps proofs, L402-gated sale."""
+"""AgentZ notary: signed SHA-256 records and OpenTimestamps proofs (operator endpoint)."""
 import base64
 import hashlib
 import http.client
@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
 
 import agentz.api.main as api
-from agentz.core import identity, l402, notary
+from agentz.core import identity, notary
 
 DIGEST_HEX = hashlib.sha256(b"example file").hexdigest()
 # Real pending timestamps returned by the three public calendars on 2026-11-26
@@ -147,10 +147,6 @@ def test_input_and_calendar_failures(key):
 
 # ------------------------------------------------------------------ API
 
-L402_ENV = {"L402_ROOT_KEY": "b2" * 32, "L402_BACKEND": "test", "NODE_ENV": "test",
-            "L402_BTC_USD_CENTS": "9000000"}
-
-
 @pytest.fixture
 def client():
     return TestClient(api.app)
@@ -163,56 +159,3 @@ def test_operator_stamp_requires_the_agent_token(client):
             ok = client.post("/agentz/notary", json={"sha256": DIGEST_HEX},
                              headers={"Authorization": "Bearer s3cret"})
     assert ok.status_code == 200 and ok.json()["record"]["sha256"] == DIGEST_HEX
-
-
-def test_paid_stamp_is_off_until_a_backend_exists(client, monkeypatch):
-    for name in L402_ENV:
-        monkeypatch.delenv(name, raising=False)
-    res = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX})
-    assert res.status_code == 503 and res.json() == {"error": "l402_not_enabled", "rail": "lightning"}
-
-
-def test_paid_stamp_round_trip_one_token_one_stamp(client, monkeypatch, tmp_path):
-    for name, value in L402_ENV.items():
-        monkeypatch.setenv(name, value)
-    monkeypatch.setenv("AGENTZ_L402_CLAIMS_DIR", str(tmp_path / "claims"))
-    unpaid = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX})
-    assert unpaid.status_code == 402 and unpaid.json()["sats"] == 56  # $0.05 at $90,000/BTC
-    header = unpaid.headers["www-authenticate"]
-    mac = header.split('macaroon="')[1].split('"')[0]
-    payment_hash = header.split('invoice="')[1].split('"')[0].split(":")[-1]
-    auth = f"L402 {mac}:{l402.test_backend().preimage_for(payment_hash)}"
-
-    seen = {}
-
-    def fake_notarize(sha, paid=None):
-        seen.update(sha=sha, paid=paid)
-        return {"record": {"sha256": sha, "paid": paid}}
-
-    with patch("agentz.core.notary.notarize", side_effect=RuntimeError("no_calendar_accepted")):
-        down = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX}, headers={"Authorization": auth})
-    assert down.status_code == 503 and down.json()["retry_with_same_token"] is True
-
-    # An unexpected error also releases the token rather than leaving it spent.
-    with patch("agentz.core.notary.notarize", side_effect=KeyError("surprise")):
-        odd = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX}, headers={"Authorization": auth})
-    assert odd.status_code == 503 and odd.json()["error"] == "notary_failed"
-
-    with patch("agentz.core.notary.notarize", side_effect=fake_notarize):
-        paid = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX}, headers={"Authorization": auth})
-        again = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX}, headers={"Authorization": auth})
-    assert paid.status_code == 200
-    assert seen["paid"] == {"rail": "lightning", "payment_hash": payment_hash, "amount_msat": "56000"}
-    assert again.status_code == 409
-
-
-def test_paid_stamp_refuses_a_signals_token(client, monkeypatch, tmp_path):
-    for name, value in L402_ENV.items():
-        monkeypatch.setenv(name, value)
-    cfg = l402.config()
-    ch = l402.challenge(cfg, service="signals", capability="ping", resource=api.NOTARY_PAID_RESOURCE,
-                        price_atomic_usd=10_000)
-    auth = f"L402 {ch['macaroon']}:{l402.test_backend().preimage_for(ch['payment_hash'])}"
-    res = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX}, headers={"Authorization": auth})
-    assert res.status_code == 402 and res.json()["error"] == "l402_wrong_services"
-    assert res.headers["www-authenticate"].startswith("L402 macaroon=")
