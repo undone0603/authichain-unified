@@ -11,9 +11,15 @@
  * BTC price, whole sats, 1-sat minimum, valid for 10 minutes.
  *
  * A Lightning payment is final when the preimage is shown, so the paid path
- * has no settlement step: verify the token, claim its payment hash in the
- * replay store, read the registry, answer. If the registry read fails the
- * claim is released so the payer can retry with the same token.
+ * has no settlement step: verify the token, claim its payment hash, read the
+ * registry, answer. If the registry read fails the claim is released so the
+ * payer can retry with the same token.
+ *
+ * The claim must be atomic: with no settlement afterwards, nothing else would
+ * stop ten simultaneous requests with one token from all being served. It is
+ * the L402Claims Durable Object (worker-app/l402-claims.ts), one instance per
+ * payment hash; KV's separate read and write could not guarantee it. Without
+ * the L402_CLAIMS binding, L402 stays off.
  */
 import {
   createL402Challenge,
@@ -25,13 +31,9 @@ import {
   type LightningBackend,
 } from "./l402";
 import {
-  claimReplay,
   readSeal,
-  releaseReplay,
-  rememberSettledProof,
   sealLookupCredentials,
   type PaidSealDecision,
-  type ReplayStore,
   type SealLookupEnv,
 } from "./paid-seal-verify";
 import { coerceSealBody, listedSealId, parseSealRequest } from "./agent-verify";
@@ -43,7 +45,56 @@ export const L402_LOCATION = "authichain.com";
 const BTC_USD_MIN_CENTS = 100_000; // $1,000
 const BTC_USD_MAX_CENTS = 1_000_000_000; // $10,000,000
 
+/** Structural view of a Durable Object namespace (keeps this file Node-importable). */
+export type ClaimNamespace = {
+  idFromName(name: string): unknown;
+  get(id: never): { fetch(input: string, init?: RequestInit): Promise<Response> };
+};
+
+export type L402ClaimResult = "claimed" | "replay" | "unavailable";
+
+export interface L402ClaimStore {
+  claim(paymentHash: string): Promise<L402ClaimResult>;
+  release(paymentHash: string): Promise<void>;
+  settle(paymentHash: string): Promise<void>;
+}
+
+/** Atomic claims backed by the L402Claims Durable Object, one instance per payment hash. */
+export function durableClaimStore(ns: ClaimNamespace): L402ClaimStore {
+  const call = async (paymentHash: string, op: string): Promise<string | null> => {
+    try {
+      const stub = ns.get(ns.idFromName(l402ReplayKey(paymentHash)) as never);
+      const res = await stub.fetch("https://l402-claims.internal/", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ op }),
+      });
+      if (!res.ok) return null;
+      const body = (await res.json()) as { result?: unknown };
+      return typeof body?.result === "string" ? body.result : null;
+    } catch {
+      return null;
+    }
+  };
+  return {
+    async claim(paymentHash) {
+      const result = await call(paymentHash, "claim");
+      if (result === "claimed") return "claimed";
+      if (result === "replay") return "replay";
+      return "unavailable";
+    },
+    async release(paymentHash) {
+      await call(paymentHash, "release");
+    },
+    async settle(paymentHash) {
+      await call(paymentHash, "settle");
+    },
+  };
+}
+
 export type L402Env = {
+  /** L402Claims Durable Object namespace. Unbound = L402 off (fail closed). */
+  L402_CLAIMS?: ClaimNamespace;
   L402_ROOT_KEY?: string;
   /** Backend name. Only "test" exists, and only when NODE_ENV=test. */
   L402_BACKEND?: string;
@@ -54,6 +105,7 @@ export type L402Env = {
 
 export type L402SignalsConfig = {
   rootKey: Buffer;
+  claims: L402ClaimStore;
   backend: LightningBackend;
   allowTestBackend: boolean;
   btcUsdCents: () => Promise<number | null>;
@@ -67,13 +119,15 @@ export function l402TestBackend(): ReturnType<typeof testLightningBackend> {
   return sharedTestBackend;
 }
 
-/** Null (L402 off) unless the root key, a backend and a price are all available. */
+/** Null (L402 off) unless the root key, the claims store, a backend and a price are all available. */
 export function l402SignalsConfig(
   env: L402Env | undefined,
   fetchImpl: typeof fetch = fetch
 ): L402SignalsConfig | null {
   const rootKey = l402RootKey(env?.L402_ROOT_KEY);
   if (!rootKey) return null;
+  const namespace = env?.L402_CLAIMS;
+  if (!namespace || typeof namespace.idFromName !== "function") return null;
   const name = (env?.L402_BACKEND ?? "").trim();
   // Live adapters land once the owner chooses a provider; until then only
   // the test backend resolves, and only in a test runtime.
@@ -81,6 +135,7 @@ export function l402SignalsConfig(
   const fixed = Number(env?.L402_BTC_USD_CENTS);
   return {
     rootKey,
+    claims: durableClaimStore(namespace),
     backend: l402TestBackend(),
     allowTestBackend: true,
     btcUsdCents: Number.isInteger(fixed) && fixed > 0
@@ -163,7 +218,6 @@ export async function resolveL402PaidSealVerify(input: {
   bodyText: string;
   env?: SealLookupEnv;
   fetchImpl?: typeof fetch;
-  replayStore?: ReplayStore | null;
   nowSeconds?: number;
 }): Promise<PaidSealDecision> {
   const verdict = verifyL402(input.authorization, {
@@ -205,16 +259,24 @@ export async function resolveL402PaidSealVerify(input: {
   }
   const sealId = parsed.ok ? parsed.sealId : null;
 
-  const keys = [l402ReplayKey(verdict.paymentHash)];
-  const replayStore = input.replayStore ?? null;
-  const claim = await claimReplay(replayStore, keys);
-  if (claim) return { action: "answer", ...claim };
+  const claims = input.config.claims;
+  const claim = await claims.claim(verdict.paymentHash);
+  if (claim === "replay") {
+    return { action: "answer", status: 409, body: { error: "replay_rejected", rail: "lightning" } };
+  }
+  if (claim !== "claimed") {
+    return {
+      action: "answer",
+      status: 503,
+      body: { error: "l402_claims_unavailable", settled: true, retry_with_same_token: true },
+    };
+  }
 
   let seal: Record<string, unknown> | null = null;
   if (sealId) {
     const lookup = await readSeal(input.fetchImpl ?? fetch, creds, sealId);
     if (!lookup.ok) {
-      await releaseReplay(replayStore, keys);
+      await claims.release(verdict.paymentHash);
       return {
         action: "answer",
         status: 503,
@@ -223,7 +285,7 @@ export async function resolveL402PaidSealVerify(input: {
     }
     seal = lookup.seal;
   }
-  await rememberSettledProof(replayStore, keys, { sealId, txHash: null });
+  await claims.settle(verdict.paymentHash);
   return {
     action: "answer",
     status: 200,

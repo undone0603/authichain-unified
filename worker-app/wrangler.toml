@@ -293,6 +293,16 @@ class_name = "RateLimiter"
 tag = "v1"
 new_sqlite_classes = ["RateLimiter"]
 
+# L402 (Lightning) one-payment-one-call claims, one instance per payment hash.
+# Inert until L402 is enabled (docs/strategy/LIGHTNING_L402.md, owner gates).
+[[durable_objects.bindings]]
+name = "L402_CLAIMS"
+class_name = "L402Claims"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["L402Claims"]
+
 # ─── Cron Triggers ────────────────────────────────────
 # ONE trigger, ten jobs. Cloudflare caps cron triggers PER ACCOUNT at five on
 # the free plan, and three are already spent (qron-automation,

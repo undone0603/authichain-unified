@@ -107,8 +107,13 @@ and no challenge is issued from it.
 
 As with an x402 payment, a token buys one call:
 
-1. The handler claims `l402:ph:<payment_hash>` in `X402_REPLAY_KV` before answering. Without the
-   store it fails closed.
+1. The handler claims the payment hash before answering, in the `L402Claims` Durable Object
+   (`worker-app/l402-claims.ts`, binding `L402_CLAIMS`, one instance per `l402:ph:<payment_hash>`).
+   The check and the write run as one step (`blockConcurrencyWhile`), so ten simultaneous requests
+   with the same token get exactly one answer. KV can't guarantee that: its read and write are
+   separate, and unlike x402 there is no on-chain settlement afterwards to reject a duplicate.
+   Without the binding, L402 stays off; if the object can't be reached, the answer is
+   `503 l402_claims_unavailable` and nothing is served.
 2. A reused token gets `409`.
 3. If the registry read fails after the claim, the claim is released and the answer says
    `retry_with_same_token`, so a paid caller is never left with nothing.
@@ -124,8 +129,9 @@ read from the backend, live.
 | `notary` | AgentZ (`agentz/core/notary.py`): signs a file's SHA-256 and anchors it in Bitcoin via OpenTimestamps | next PR |
 | `dex` | `undone0603/agentz-dex-terminal` (`signal.authichain.com`) | next PR |
 
-**When L402 is on (signals).** It needs all three of:
+**When L402 is on (signals).** It needs all four of:
 - `L402_ROOT_KEY`
+- the `L402_CLAIMS` Durable Object binding (declared in `worker-app/wrangler.toml`, inert until the rest is set)
 - a live backend
 - a BTC price
 
