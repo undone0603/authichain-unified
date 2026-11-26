@@ -150,8 +150,8 @@ for i, r in enumerate(results, 1):
         lines += [f"_could not read: {err}_", ""]
         continue
     ok += 1
-    text = "\n".join(l for l in snap.splitlines() if "StaticText" in l or "heading" in l)
-    text = re.sub(r'^\s*- (StaticText|heading) ?', '', text, flags=re.M).strip() or snap
+    # keep every non-empty line: agent-browser and aria snapshot formats differ
+    text = "\n".join(l.rstrip() for l in snap.splitlines() if l.strip())
     lines += ["```text", text[:6000].replace("```", "'''") + ("\n… (truncated)" if len(text) > 6000 else ""), "```", ""]
 slug = re.sub(r"[^a-z0-9]+", "-", q.lower()).strip("-")[:60] or "research"
 path = os.path.join(out_dir, f"{now:%Y%m%d-%H%M%S}-{slug}.md")
