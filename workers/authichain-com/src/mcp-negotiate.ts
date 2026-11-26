@@ -14,6 +14,9 @@ export const NEGOTIABLE_SERVICES = [
   "verify_record",
   "dpp_readiness_check",
   "scan_living_qr",
+  "batch_verify",
+  "audit_ledger",
+  "compliance_report",
 ] as const;
 
 const FREE_SERVICES: readonly string[] = [
@@ -23,6 +26,7 @@ const FREE_SERVICES: readonly string[] = [
   "verify_record",
   "dpp_readiness_check",
   "scan_living_qr",
+  "compliance_report",
 ];
 
 const FIELDS = ["service", "mode", "currency", "max_budget_usd"] as const;
@@ -31,8 +35,8 @@ export const NEGOTIATE_TOOL = {
   name: "negotiate",
   description:
     "Free, read-only, non-binding agent-to-agent capability/price-class quote. " +
-    "Returns available service, free vs separately authorized paid rail, and " +
-    "next step; never accepts terms, creates a commitment, transfers money, " +
+    "Returns available service, free vs separately authorized paid rail, supported transports, " +
+    "SLA tier, and next step; never accepts terms, creates a commitment, transfers money, " +
     "or calls an external service. This is NOT MCP initialize version negotiation.",
   inputSchema: {
     type: "object",
@@ -121,6 +125,7 @@ export function negotiateQuote(input: unknown): NegotiationResult {
   }
 
   const free = FREE_SERVICES.includes(args.service);
+  const isEnterprise = ["batch_verify", "audit_ledger"].includes(args.service);
   return {
     isError: false,
     body: {
@@ -131,8 +136,11 @@ export function negotiateQuote(input: unknown): NegotiationResult {
       ...(args.max_budget_usd !== undefined
         ? { max_budget_usd: args.max_budget_usd }
         : {}),
-      price_usd: free ? 0 : null,
-      price_status: free ? "free" : "recheck_current_pricing",
+      price_usd: free ? 0 : (isEnterprise ? 49.0 : 0.05),
+      price_status: free ? "free" : "requires_x402_or_stripe_authorization",
+      supported_transports: ["mcp", "http_json", "x402"],
+      sla_tier: isEnterprise ? "enterprise" : "standard",
+      rate_limit_rpm: isEnterprise ? 300 : 60,
       next_action: free
         ? "call_named_tool_separately"
         : "call_get_pricing_then_seek_explicit_payment_authorization",

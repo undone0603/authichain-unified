@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const postgres = require('postgres');
-require('dotenv').config();
+
 
 const sql = postgres(process.env.DATABASE_URL || '');
 
-async function checkUserProfiles() {
+async function checkSubs() {
   try {
-    const data = await sql`SELECT id, user_id FROM user_profiles LIMIT 5`;
-    console.log('user_profiles data:', data);
+    const cols = await sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'subscriptions'`;
+    console.log('subscriptions columns:', cols.map(c => c.column_name).join(', '));
   } catch (err) {
     console.error('Failed:', err.message);
   } finally {
@@ -15,4 +15,4 @@ async function checkUserProfiles() {
   }
 }
 
-checkUserProfiles();
+checkSubs();

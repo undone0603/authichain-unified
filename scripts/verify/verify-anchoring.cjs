@@ -3,8 +3,11 @@
  * This script simulates the anchoring process to verify the AuthiChain protocol integration.
  */
 
-const { ethers } = require('ethers');
-require('dotenv').config();
+// Use dynamic import for ESM-only or pnpm sub-dependency compatibility
+async function getEthers() {
+  return await import('ethers');
+}
+
 
 const AUTHICHAIN_ABI = [
   "function anchorHash(bytes32 edgeHash, string metadata) external returns (uint256)",
@@ -13,6 +16,7 @@ const AUTHICHAIN_ABI = [
 
 async function verifyAnchoring() {
   console.log('--- Phase 2: Blockchain Anchoring Verification ---');
+  const ethers = await getEthers();
   
   const providerUrl = process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
   const privateKey = process.env.BLOCKCHAIN_PRIVATE_KEY;

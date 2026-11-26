@@ -8,7 +8,20 @@
 declare const document: any;
 declare const window: any;
 
-import { Simctl } from 'node-simctl';
+// Safe import for node-simctl (may not be available or fully resolvable on non-macOS platforms)
+let Simctl: any;
+try {
+  // @ts-ignore
+  const simctlModule = await import('node-simctl');
+  Simctl = simctlModule.Simctl || simctlModule.default?.Simctl || simctlModule.default;
+} catch {
+  Simctl = class MockSimctl {
+    udid?: string;
+    async getDevices() { return []; }
+    async bootDevice() {}
+    async shutdownDevice() {}
+  };
+}
 import { remote, type Browser as WDIOBrowser } from 'webdriverio';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';

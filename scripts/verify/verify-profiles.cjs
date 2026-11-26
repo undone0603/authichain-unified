@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const postgres = require('postgres');
-require('dotenv').config();
+
 
 const sql = postgres(process.env.DATABASE_URL || '');
 

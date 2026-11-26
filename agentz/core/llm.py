@@ -26,7 +26,8 @@ class LMStudioManager:
     def _local_management_headers(self) -> dict[str, str]:
         """Send the LM Studio token only to localhost/RFC1918 endpoints."""
         token = (
-            os.environ.get("LM_STUDIO_API_TOKEN")
+            os.environ.get("LM_STUDIO_API")
+            or os.environ.get("LM_STUDIO_API_TOKEN")
             or os.environ.get("LM_API_TOKEN")
             or os.environ.get("LM_STUDIO_API_KEY")
         )
@@ -220,16 +221,14 @@ class LimitProofLLM:
     @staticmethod
     def _local_timeout() -> float:
         # Seconds to wait on the local model before moving to the next
-        # provider. Claw aborts an /architect/cycle call at 95s
-        # (AGENTZ_TIMEOUT_MS), and two local attempts at the old 120s each
-        # guaranteed a 502 whenever the local model was slow or on the wrong
-        # port. 40s each leaves room for a cloud provider after both.
-        raw = os.environ.get("LOCAL_MODEL_TIMEOUT", "40")
+        # provider. Default raised to 120s to accommodate CPU-only reasoning
+        # models (e.g. gemma-4-e4b) without premature client disconnects.
+        raw = os.environ.get("LOCAL_MODEL_TIMEOUT", "120")
         try:
             value = float(raw)
         except ValueError:
-            return 40.0
-        return min(max(value, 5.0), 120.0)
+            return 120.0
+        return min(max(value, 5.0), 300.0)
 
     def _get_lmstudio(self):
         llm = ChatOpenAI(

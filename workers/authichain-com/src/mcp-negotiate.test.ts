@@ -28,7 +28,7 @@ function request(method: string, path: string, args?: unknown): Request {
 
 describe("MCP callable negotiate (quote only)", () => {
   it("advertises exactly eight unique tools and a strict read-only schema", async () => {
-    expect(NEGOTIABLE_SERVICES).toHaveLength(7);
+    expect(NEGOTIABLE_SERVICES).toHaveLength(10);
     expect(TOOLS.map(t => t.name)).toEqual(ALL_EIGHT);
     expect(new Set(TOOLS.map(t => t.name)).size).toBe(8);
     expect(NEGOTIATE_TOOL.inputSchema).toMatchObject({
@@ -52,7 +52,16 @@ describe("MCP callable negotiate (quote only)", () => {
   });
 
   it("returns deterministic, non-binding, zero-price quotes for every free tool", () => {
-    for (const service of NEGOTIABLE_SERVICES.filter(name => name !== "verify")) {
+    const freeServices = [
+      "get_pricing",
+      "query_provenance",
+      "verify_attestation",
+      "verify_record",
+      "dpp_readiness_check",
+      "scan_living_qr",
+      "compliance_report",
+    ];
+    for (const service of NEGOTIABLE_SERVICES.filter(name => freeServices.includes(name))) {
       const args = Object.freeze({ service, mode: "quote_only", currency: "USD", max_budget_usd: 0 });
       const quote = negotiateQuote(args);
       expect(quote.isError).toBe(false);
@@ -110,8 +119,8 @@ describe("MCP callable negotiate (quote only)", () => {
       expect(quote).toMatchObject({
         service: "verify",
         status: "separate_authorization_required",
-        price_usd: null,
-        price_status: "recheck_current_pricing",
+        price_usd: 0.05,
+        price_status: "requires_x402_or_stripe_authorization",
         binding: false,
         accepted: false,
         payment_authorized: false,

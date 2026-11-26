@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 const verifyDir = './scripts/verify';
-const files = fs.readdirSync(verifyDir).filter(f => f.endsWith('.js'));
+const files = fs.readdirSync(verifyDir).filter(f => f.endsWith('.cjs'));
 
 console.log(`🚀 Starting system verification suite... (${files.length} checks)\n`);
 
@@ -13,7 +13,7 @@ let failed = 0;
 files.forEach(file => {
   try {
     console.log(`Checking ${file}...`);
-    execSync(`node ${path.join(verifyDir, file)}`, { stdio: 'inherit' });
+    execSync(`node --env-file=.env ${path.join(verifyDir, file)}`, { stdio: 'inherit' });
     passed++;
   } catch (e) {
     console.error(`❌ ${file} failed.`);
