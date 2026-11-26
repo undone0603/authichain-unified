@@ -1,0 +1,9 @@
+[Unit]
+Description=Re-check AgentZ isolated browser host every 10 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=10min
+
+[Install]
+WantedBy=timers.target
