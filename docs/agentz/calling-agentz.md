@@ -88,3 +88,6 @@ AgentZ (host net) --CDP 127.0.0.1:9222--> isobrowser-relay (alpine/socat)
 - `agentz-browser-stack.timer` runs `ensure` every 10 minutes: restarts the stack if CDP is down and
   re-copies the sha256-pinned `agent-browser` v0.43.0 into the AgentZ container if it was recreated.
   Durable fix: bake `agent-browser` + the wrapper into the AgentZ image.
+- A human or supervising agent never attaches to this browser. They use the separate operator
+  browser on `127.0.0.1:9223` and hand pages back and forth through the handoff exchange:
+  [remote-browser.md](remote-browser.md).
