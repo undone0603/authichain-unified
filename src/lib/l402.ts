@@ -2,8 +2,7 @@
  * @file l402.ts
  * L402: Lightning payments on the same HTTP 402 flow as x402.
  *
- * Spec, caveats and owner gates: docs/strategy/LIGHTNING_L402.md.
- * Test vectors every implementation must pass: shared/l402-vectors.json.
+ * Spec and owner gates: docs/strategy/LIGHTNING_L402.md.
  *
  *   402 challenge  WWW-Authenticate: L402 macaroon="<base64>", invoice="<bolt11>"
  *   paid retry     Authorization: L402 <base64 macaroon>:<hex preimage>

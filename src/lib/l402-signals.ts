@@ -28,6 +28,7 @@ import {
   testLightningBackend,
   verifyL402,
   type L402Challenge,
+  type L402Service,
   type LightningBackend,
 } from "./l402";
 import {
@@ -183,11 +184,12 @@ export function l402Resource(url: string): string {
   return u.pathname + u.search;
 }
 
-/** A challenge for one signal call, or null when L402 is off or unpriced. */
-export async function l402SignalChallenge(input: {
+/** A challenge for one paid call, or null when L402 is off or unpriced. */
+export async function l402ChallengeFor(input: {
   config: L402SignalsConfig | null;
   url: string;
-  tier: SignalTier;
+  service: L402Service;
+  capability: string;
   priceUsd: number;
   nowSeconds?: number;
 }): Promise<L402Challenge | null> {
@@ -200,13 +202,23 @@ export async function l402SignalChallenge(input: {
     backend: cfg.backend,
     allowTestBackend: cfg.allowTestBackend,
     location: L402_LOCATION,
-    service: "signals",
-    capability: input.tier,
+    service: input.service,
+    capability: input.capability,
     resource: l402Resource(input.url),
     priceAtomicUsd: usdToAtomic(input.priceUsd),
     btcUsdCents: cents,
     nowSeconds: input.nowSeconds ?? Math.floor(Date.now() / 1000),
   });
+}
+
+export function l402SignalChallenge(input: {
+  config: L402SignalsConfig | null;
+  url: string;
+  tier: SignalTier;
+  priceUsd: number;
+  nowSeconds?: number;
+}): Promise<L402Challenge | null> {
+  return l402ChallengeFor({ ...input, service: "signals", capability: input.tier });
 }
 
 /** Paid signal call over L402. Mirrors resolvePaidSealVerify minus settlement. */
