@@ -532,6 +532,10 @@ async def api_agentz_notary_paid(data: NotaryInput, request: Request):
     except (PermissionError, RuntimeError, OSError) as exc:
         claims.release(verdict["payment_hash"])
         return JSONResponse({"error": str(exc)[:300], "retry_with_same_token": True}, status_code=503)
+    except Exception as exc:  # noqa: BLE001 - a paid token must never be left spent without a stamp
+        claims.release(verdict["payment_hash"])
+        return JSONResponse({"error": "notary_failed", "detail": type(exc).__name__,
+                             "retry_with_same_token": True}, status_code=503)
 
 
 class ResearchInput(BaseModel):

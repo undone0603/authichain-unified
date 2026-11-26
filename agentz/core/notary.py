@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -51,6 +52,94 @@ def _b64url(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
 
 
+_UNARY_OPS = {0x02, 0x03, 0x08, 0x67, 0xF2, 0xF3}  # sha1 ripemd160 sha256 keccak256 reverse hexlify
+_BINARY_OPS = {0xF0, 0xF1}  # append, prepend (one varbytes argument)
+_PENDING_TAG = bytes.fromhex("83dfe30d2ef90c8e")
+# The character set the official client accepts in a pending attestation URI.
+_URI_CHARS = frozenset(b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._/:")
+_MAX_OP_ARG = 4096
+_MAX_ATTESTATION = 8192
+_MAX_DEPTH = 256
+
+
+def valid_calendar_timestamp(buf: bytes) -> bool:
+    """True only for a well-formed OpenTimestamps timestamp, as a calendar returns.
+
+    Follows the serialization the official client reads: items are operations
+    (each followed by a sub-timestamp) or attestations, 0xff marks a fork.
+    It requires at least one attestation, no unknown tags, no trailing bytes,
+    and a pending attestation whose URI is https. An error page that answers
+    200 is refused here instead of being signed into a record.
+    """
+    pos = 0
+    attestations = 0
+
+    def byte() -> int:
+        nonlocal pos
+        if pos >= len(buf):
+            raise ValueError("truncated")
+        b = buf[pos]
+        pos += 1
+        return b
+
+    def varuint(read=byte) -> int:
+        value = shift = 0
+        while True:
+            b = read()
+            value |= (b & 0x7F) << shift
+            if not b & 0x80:
+                return value
+            shift += 7
+            if shift > 63:
+                raise ValueError("varuint too long")
+
+    def varbytes(max_len: int, min_len: int = 0) -> bytes:
+        nonlocal pos
+        n = varuint()
+        if n < min_len or n > max_len or pos + n > len(buf):
+            raise ValueError("bad length")
+        out = buf[pos:pos + n]
+        pos += n
+        return out
+
+    def pending_uri_ok(payload: bytes) -> bool:
+        it = iter(payload)
+        n = varuint(lambda: next(it))
+        uri = bytes(it)
+        return n == len(uri) and uri.startswith(b"https://") and all(c in _URI_CHARS for c in uri)
+
+    def item(tag: int, depth: int) -> None:
+        nonlocal attestations
+        if tag == 0x00:
+            att_tag = bytes(byte() for _ in range(8))
+            payload = varbytes(_MAX_ATTESTATION)
+            if att_tag == _PENDING_TAG and not pending_uri_ok(payload):
+                raise ValueError("bad pending uri")
+            attestations += 1
+        elif tag in _UNARY_OPS:
+            timestamp(depth + 1)
+        elif tag in _BINARY_OPS:
+            varbytes(_MAX_OP_ARG, 1)
+            timestamp(depth + 1)
+        else:
+            raise ValueError("unknown tag")
+
+    def timestamp(depth: int) -> None:
+        if depth > _MAX_DEPTH:
+            raise ValueError("too deep")
+        tag = byte()
+        while tag == 0xFF:
+            item(byte(), depth)
+            tag = byte()
+        item(tag, depth)
+
+    try:
+        timestamp(0)
+    except (ValueError, StopIteration, RecursionError):
+        return False
+    return pos == len(buf) and attestations > 0
+
+
 def ots_file(digest: bytes, calendar_timestamp: bytes) -> bytes:
     """A standalone detached OpenTimestamps proof for a SHA-256 digest."""
     if len(digest) != 32:
@@ -71,11 +160,16 @@ def submit(digest: bytes, calendars: Iterable[str] = CALENDARS,
             with opener(req, timeout=timeout) as res:
                 body = res.read(MAX_CALENDAR_RESPONSE + 1)
                 status = getattr(res, "status", 200)
-        except OSError as exc:
+        except (OSError, http.client.HTTPException) as exc:
+            # HTTPException covers a response cut short (IncompleteRead), which
+            # is not an OSError: one broken calendar must not stop the others.
             out.append({"calendar": cal, "accepted": False, "error": type(exc).__name__})
             continue
         if status != 200 or not body or len(body) > MAX_CALENDAR_RESPONSE:
             out.append({"calendar": cal, "accepted": False, "error": f"http_{status}"})
+            continue
+        if not valid_calendar_timestamp(body):
+            out.append({"calendar": cal, "accepted": False, "error": "invalid_timestamp"})
             continue
         proof = ots_file(digest, body)
         out.append({"calendar": cal, "accepted": True, "status": "pending",

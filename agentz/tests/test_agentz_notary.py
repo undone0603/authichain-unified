@@ -1,6 +1,7 @@
 """AgentZ notary: signed SHA-256 records, OpenTimestamps proofs, L402-gated sale."""
 import base64
 import hashlib
+import http.client
 import io
 import json
 from unittest.mock import patch
@@ -14,7 +15,14 @@ import agentz.api.main as api
 from agentz.core import identity, l402, notary
 
 DIGEST_HEX = hashlib.sha256(b"example file").hexdigest()
-CAL_TS = b"\xf0\x10" + b"\x11" * 16 + b"\x08\xf1\x04abcd\x00\x83\xdf\xe3\x0d\x2e\xf9\x0c\x8e\x05\x04test"
+# Real pending timestamps returned by the three public calendars on 2026-11-26
+# (each parsed by the official opentimestamps library before being copied here).
+REAL_CALENDAR_TS = [bytes.fromhex(h) for h in (
+    "f008b7e2899f699ef0d508f1209aaeff9f79fc4ca5f07ae425489a2fe5279008c7ae86023f438059608992faf408f120bc08f52c1a034f69108479c88832bf9c947f80745b5c932b0851bd63d2f75b5608f0104e93dfa750cce08e0470b917f07453cf08f12049dd8f5034a6aeb64689bc419c6ee0947bbc915bc5ab94e3478ef65230b03bd608f1046b0849cff00865341bce42f2cfd80083dfe30d2ef90c8e2e2d68747470733a2f2f616c6963652e6274632e63616c656e6461722e6f70656e74696d657374616d70732e6f7267",
+    "f008b2e927d328ca53ef08f120089107fda1075c4e0d29a1c12ea7f176a83a9d1442f8020559c30f724d17967008f010448486d37accc6aaaf60a8855b7c5be308f0209d5ce0665ca2b6e3d21e169959ef1c5f1d21ff24f5e02d06ac439e5ae8397d3e08f120fdaa67d3c9143b1549cd61a643feb049bf32f48928d54caefa2043ec0d134cd508f1209331c76c00505d8ef1a327f6b8331d0c3e00996e81018abb4447d5d22f9866a408f1046b0849d0f00863f0a44a77bc00ae0083dfe30d2ef90c8e2c2b68747470733a2f2f626f622e6274632e63616c656e6461722e6f70656e74696d657374616d70732e6f7267",
+    "f01064ff3fc1e7e21f411f4c7dc14a41c5af08f020e8478210ea9ece6d28941e87aa24c746ee26af51021b17b96e60ff3ab83504df08f0204d68b3cc26166072cb0fd73e60b84d94ea11d60d8d0aef05f525af25c7f3a90f08f020d174270383b5225099e7158c1ed3d242e0f7941022dfef702320b518bcd60d5008f0200f3fc3e650e8ad45203b27773dc926d20d7720fc8a66ed0c6b79853f6f2d40e008f020c4c2fc7002c2d46b8e71956d857aae1d138647187674372cb647e529b614dadf08f1046b0849d2f0088565829dcfa2dcea0083dfe30d2ef90c8e292868747470733a2f2f66696e6e65792e63616c656e6461722e657465726e69747977616c6c2e636f6d",
+)]
+CAL_TS = REAL_CALENDAR_TS[0]
 
 
 def _pem(key):
@@ -62,6 +70,38 @@ def test_ots_file_layout():
     assert raw[len(notary.OTS_MAGIC) + 2:len(notary.OTS_MAGIC) + 34].hex() == DIGEST_HEX
     with pytest.raises(ValueError):
         notary.ots_file(b"short", CAL_TS)
+
+
+def test_validator_accepts_real_calendar_timestamps_and_refuses_everything_else():
+    for ts in REAL_CALENDAR_TS:
+        assert notary.valid_calendar_timestamp(ts)
+    pending_http = b"\x08\x00" + bytes.fromhex("83dfe30d2ef90c8e") + b"\x13\x12http://example.com/"
+    for bad in (b"", b"<!DOCTYPE html><html><body>Service Unavailable</body></html>",
+                CAL_TS[:-1], CAL_TS + b"\x00", b"\x08", b"\x99" + CAL_TS[1:], pending_http,
+                b"\xf0\x00\x08" + CAL_TS[-50:]):
+        assert not notary.valid_calendar_timestamp(bad), bad[:20]
+
+
+def test_an_error_page_answered_with_200_is_a_refusal_not_a_proof():
+    res = notary.submit(bytes.fromhex(DIGEST_HEX), ["https://a.example"],
+                        opener=opener({"https://a.": b"<!DOCTYPE html><html>Service Unavailable</html>"}))
+    assert res == [{"calendar": "https://a.example", "accepted": False, "error": "invalid_timestamp"}]
+
+
+def test_a_truncated_response_is_a_refusal_and_the_other_calendars_still_run():
+    class Truncated(_Res):
+        def read(self, *a):
+            raise http.client.IncompleteRead(b"\xf0\x10", 64)
+
+    calls = []
+
+    def _open(req, timeout=10):
+        calls.append(req.full_url)
+        return Truncated(b"") if "a.example" in req.full_url else _Res(CAL_TS)
+
+    res = notary.submit(bytes.fromhex(DIGEST_HEX), ["https://a.example", "https://b.example"], opener=_open)
+    assert [(r["calendar"], r["accepted"]) for r in res] == [("https://a.example", False), ("https://b.example", True)]
+    assert res[0]["error"] == "IncompleteRead" and len(calls) == 2
 
 
 def test_submit_keeps_accepted_proofs_and_reports_refusals():
@@ -152,6 +192,11 @@ def test_paid_stamp_round_trip_one_token_one_stamp(client, monkeypatch, tmp_path
     with patch("agentz.core.notary.notarize", side_effect=RuntimeError("no_calendar_accepted")):
         down = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX}, headers={"Authorization": auth})
     assert down.status_code == 503 and down.json()["retry_with_same_token"] is True
+
+    # An unexpected error also releases the token rather than leaving it spent.
+    with patch("agentz.core.notary.notarize", side_effect=KeyError("surprise")):
+        odd = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX}, headers={"Authorization": auth})
+    assert odd.status_code == 503 and odd.json()["error"] == "notary_failed"
 
     with patch("agentz.core.notary.notarize", side_effect=fake_notarize):
         paid = client.post("/agentz/notary/paid", json={"sha256": DIGEST_HEX}, headers={"Authorization": auth})
