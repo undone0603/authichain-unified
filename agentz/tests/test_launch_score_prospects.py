@@ -43,6 +43,16 @@ class ScoreProspectsTests(unittest.TestCase):
         out = score_prospects.run(ctx(prospects=[{"name": "Wild Co", **wild}]))
         self.assertIn("Wild Co=80", out)  # icp capped at 25, pain floored at 0
 
+    def test_non_finite_values_are_incomplete_not_fatal(self):
+        out = score_prospects.run(ctx(prospects=[
+            {"name": "Inf Co", **{**FULL, "icp_fit": "inf"}},
+            {"name": "Huge Co", **{**FULL, "pain_intensity": "1e309"}},
+            {"name": "NaN Co", **{**FULL, "authichain_fit": "nan"}},
+            {"name": "Good Co", **FULL}]))
+        self.assertIn("scored 1 of 4", out)
+        self.assertIn("Good Co=100", out)
+        self.assertIn("3 incomplete", out)
+
     def test_reads_csv_source(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "prospects.csv")

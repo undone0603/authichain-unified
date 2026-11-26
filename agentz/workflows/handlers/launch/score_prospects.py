@@ -25,6 +25,7 @@ and does not write anywhere.
 from __future__ import annotations
 
 import csv
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -53,8 +54,11 @@ def _rubric(p: dict[str, Any]) -> dict[str, int] | None:
         if raw is None or str(raw).strip() == "":
             return None
         try:
-            out[field] = max(0, int(float(str(raw).strip())))
-        except ValueError:
+            value = float(str(raw).strip())
+            if not math.isfinite(value):
+                return None
+            out[field] = max(0, int(value))
+        except (ValueError, OverflowError):
             return None
     return out
 
