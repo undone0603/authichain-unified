@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+# Network-isolated browser host used by AgentZ public navigation.
+# Contains no AgentZ code (separate images, neutral names), so it is not an AgentZ
+# replica for agentz-laws-check; AgentZ only drives it over CDP.
+#
+#   agentz-browser-stack up              create/start egress proxy + browser + CDP relay
+#   agentz-browser-stack down            remove them (network kept)
+#   agentz-browser-stack status          container state + CDP version
+#   agentz-browser-stack test            prove public egress works; private/host egress is refused
+#   agentz-browser-stack install-agentz  copy sha-pinned agent-browser + wrapper into authichain-agentz
+#   agentz-browser-stack ensure          idempotent up + install (run by agentz-browser-stack.timer)
+#
+# Layout:
+#   isobrowser-net      docker --internal network, 172.31.250.0/24, inhibit_ipv4 so the HOST has
+#                       no address on it: nothing on it can reach host services.
+#   isobrowser-chrome   chromedp/headless-shell, ONLY on isobrowser-net (.10), CDP :9222
+#   isobrowser-egress   squid on isobrowser-net (.2) + isobrowser-edge; the only way out.
+#                       Refuses private/loopback/link-local/CGNAT/metadata destinations
+#                       after DNS resolution, so redirects and DNS rebinding hit the same ACL.
+#   isobrowser-relay    alpine/socat on isobrowser-edge (published 127.0.0.1:9222 only) + isobrowser-net (.5);
+#                       Chrome is recycled daily by `ensure` so cookies/storage don't persist across days.
+#                       forwards host -> chrome CDP. It only ever dials the browser.
+# AgentZ (host network) uses CDP at http://127.0.0.1:9222 and sets
+# AGENTZ_BROWSER_NETWORK_ISOLATED=true only because of this layout.
+set -euo pipefail
+
+NET=isobrowser-net
+EDGE=isobrowser-edge   # own bridge for relay + egress: other containers (e.g. runner postgres) can't reach CDP
+SUBNET=172.31.250.0/24
+PROXY_IP=172.31.250.2
+RELAY_IP=172.31.250.5
+BROWSER_IP=172.31.250.10
+CDP_HOST_PORT=127.0.0.1:9222
+CONF_DIR="$HOME/.config/agentz/browser"
+CHROME_IMAGE=chromedp/headless-shell:latest
+PROXY_IMAGE=ubuntu/squid:latest
+RELAY_IMAGE=alpine/socat:latest
+PROBE_IMAGE=alpine/socat:latest
+NAMES="isobrowser-relay isobrowser-chrome isobrowser-egress"
+
+write_conf() {
+  mkdir -p "$CONF_DIR"
+  cat > "$CONF_DIR/squid.conf" <<EOF
+http_port 3128
+acl browser_net src $SUBNET
+acl SSL_ports port 443
+acl Safe_ports port 80 443
+acl CONNECT method CONNECT
+acl blocked_dst dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.168.0.0/16 198.18.0.0/15 224.0.0.0/4 240.0.0.0/4
+# (no ::ffff:0:0/96 here: squid stores IPv4 as v4-mapped, so that entry would match every IPv4 site;
+#  mapped private IPv4 is already covered by blocked_dst)
+acl blocked_dst6 dst ::/128 ::1/128 fc00::/7 fe80::/10 ff00::/8
+http_access deny !browser_net
+http_access deny blocked_dst
+http_access deny blocked_dst6
+http_access deny !Safe_ports
+http_access deny CONNECT !SSL_ports
+http_access allow browser_net
+http_access deny all
+pinger_enable off
+cache deny all
+via off
+forwarded_for delete
+access_log daemon:/var/log/squid/access.log
+cache_log /var/log/squid/cache.log
+pid_filename none
+EOF
+}
+
+cdp_ok() { curl -fsS -m 3 "http://$CDP_HOST_PORT/json/version" >/dev/null 2>&1; }
+
+up() {
+  write_conf
+  # shellcheck disable=SC2086
+  docker rm -f $NAMES agentz-cdp-relay agentz-browser agentz-egress >/dev/null 2>&1 || true
+  docker network rm agentz-browser-net >/dev/null 2>&1 || true
+  if [ "$(docker network inspect "$NET" --format '{{index .Options "com.docker.network.bridge.inhibit_ipv4"}}' 2>/dev/null)" != true ]; then
+    docker network rm "$NET" >/dev/null 2>&1 || true
+    docker network create --internal --subnet "$SUBNET" \
+      -o com.docker.network.bridge.inhibit_ipv4=true "$NET" >/dev/null
+  fi
+  docker network inspect "$EDGE" >/dev/null 2>&1 || docker network create "$EDGE" >/dev/null
+
+  docker create --name isobrowser-egress --restart unless-stopped \
+    --network "$NET" --ip "$PROXY_IP" \
+    --cap-drop ALL --cap-add SETUID --cap-add SETGID --security-opt no-new-privileges \
+    --memory 256m --pids-limit 256 \
+    -v "$CONF_DIR/squid.conf:/etc/squid/squid.conf:ro" \
+    "$PROXY_IMAGE" >/dev/null
+  docker network connect "$EDGE" isobrowser-egress
+  docker start isobrowser-egress >/dev/null
+
+  docker run -d --name isobrowser-chrome --restart unless-stopped \
+    --network "$NET" --ip "$BROWSER_IP" \
+    --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges \
+    --read-only --tmpfs /tmp:rw,size=512m --shm-size 512m \
+    --memory 1g --pids-limit 512 \
+    -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/cache -e XDG_CONFIG_HOME=/tmp/config \
+    "$CHROME_IMAGE" \
+    --user-data-dir=/tmp/profile --disable-dev-shm-usage \
+    --proxy-server="http://$PROXY_IP:3128" --proxy-bypass-list='<-loopback>' \
+    --force-webrtc-ip-handling-policy=disable_non_proxied_udp \
+    --disable-background-networking --no-first-run --mute-audio >/dev/null
+
+  docker create --name isobrowser-relay --restart unless-stopped \
+    --network "$EDGE" -p "$CDP_HOST_PORT:9222" \
+    --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges --read-only \
+    --memory 64m --pids-limit 128 \
+    "$RELAY_IMAGE" TCP-LISTEN:9222,fork,reuseaddr "TCP:$BROWSER_IP:9222" >/dev/null
+  docker network connect --ip "$RELAY_IP" "$NET" isobrowser-relay
+  docker start isobrowser-relay >/dev/null
+
+  for _ in $(seq 1 30); do cdp_ok && { echo "up: cdp http://$CDP_HOST_PORT"; return 0; }; sleep 1; done
+  echo "CDP not reachable via relay; logs:" >&2
+  docker logs --tail 20 isobrowser-chrome >&2; docker logs --tail 20 isobrowser-relay >&2; exit 1
+}
+
+down() {
+  # shellcheck disable=SC2086
+  docker rm -f $NAMES >/dev/null 2>&1 || true; echo down
+}
+
+status() {
+  docker ps -a --filter name=isobrowser- --format '{{.Names}} {{.Image}} {{.Status}}'
+  curl -fsS -m 3 "http://$CDP_HOST_PORT/json/version" | grep -E '"Browser"|webSocketDebuggerUrl' || echo "cdp: unreachable"
+}
+
+# Probes run from a throwaway container on the isolated network (same position as Chromium).
+probe() { # url -> HTTP status line via the proxy, or "000 ..." if unreachable
+  local u="$1" host port path
+  host=$(sed -E 's#^[a-z]+://(\[[^]]+\]|[^/:]+).*#\1#' <<<"$u")
+  if [[ "$u" == https://* ]]; then
+    # CONNECT through the proxy; 200 = tunnel allowed
+    docker run --rm --network "$NET" --cap-drop ALL --entrypoint sh "$PROBE_IMAGE" -c \
+      "printf 'CONNECT %s:443 HTTP/1.1\r\nHost: %s:443\r\n\r\n' '$host' '$host' | socat -T10 - TCP:$PROXY_IP:3128 | head -1 | cut -d' ' -f2" \
+      2>/dev/null || echo "000"
+  else
+    docker run --rm --network "$NET" --cap-drop ALL --entrypoint sh "$PROBE_IMAGE" -c \
+      "printf 'GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n' '$u' '$host' | socat -T10 - TCP:$PROXY_IP:3128 | head -1 | cut -d' ' -f2" \
+      2>/dev/null || echo "000"
+  fi
+}
+
+direct() { # host:port -> direct (non-proxied) egress from the isolated network must fail
+  docker run --rm --network "$NET" --cap-drop ALL "$PROBE_IMAGE" -T5 /dev/null "TCP:$1,connect-timeout=5" >/dev/null 2>&1 \
+    && echo OPEN || echo blocked
+}
+
+test_iso() {
+  local fail=0 r t u
+  r=$(probe https://example.com); echo "public  https://example.com (CONNECT) -> $r"; [[ "$r" == 200 ]] || fail=1
+  # relay must not be reachable from the default bridge (where other containers live)
+  local rip; rip=$(docker inspect -f "{{(index .NetworkSettings.Networks \"$EDGE\").IPAddress}}" isobrowser-relay)
+  r=$(docker run --rm --network bridge --cap-drop ALL "$PROBE_IMAGE" -T5 /dev/null "TCP:$rip:9222,connect-timeout=5" >/dev/null 2>&1 && echo OPEN || echo blocked)
+  echo "bridge  -> relay $rip:9222 -> $r"; [[ "$r" == blocked ]] || fail=1
+  for t in 1.1.1.1:443 172.31.250.1:3000 172.31.250.1:8000 172.17.0.1:3000 172.17.0.1:8000 "$RELAY_IP:3128"; do
+    r=$(direct "$t"); echo "direct  $t (no proxy) -> $r"; [[ "$r" == blocked ]] || fail=1
+  done
+  for u in http://169.254.169.254/ http://127.0.0.1:8000/health http://172.17.0.1:3000/ http://10.0.0.1/ http://192.168.1.1/ http://localtest.me/ http://[::1]/ https://localtest.me; do
+    r=$(probe "$u"); echo "private $u -> ${r:-000}"; [[ "$r" == 403 || -z "$r" || "$r" == 000 ]] || fail=1
+  done
+  [ $fail = 0 ] && echo "ISOLATION OK" || { echo "ISOLATION FAILED" >&2; exit 1; }
+}
+
+# Put the sha-pinned agent-browser + fail-closed wrapper into the AgentZ container
+# (lost when that container is recreated; `ensure` re-adds them).
+BIN_DIR="$HOME/.local/share/agentz-browser/v0.43.0"
+BIN_SHA=34be55c2b92d8d199fb9d1d62a905ee5b6ac5b1f3e8c24e5b20597f370d905e5
+install_agentz() {
+  echo "$BIN_SHA  $BIN_DIR/agent-browser" | sha256sum --check --quiet
+  docker exec -u 0 authichain-agentz mkdir -p /opt/agentz-browser
+  docker cp "$BIN_DIR/agent-browser" authichain-agentz:/opt/agentz-browser/agent-browser
+  docker cp "$BIN_DIR/agentz-browser" authichain-agentz:/opt/agentz-browser/agentz-browser
+  docker exec authichain-agentz chmod 755 /opt/agentz-browser/agent-browser /opt/agentz-browser/agentz-browser
+  echo "installed agent-browser into authichain-agentz"
+}
+
+ensure() {
+  cdp_ok || up
+  # Daily recycle: fresh profile (cookies, storage, cache) at most 24h old.
+  local started
+  started=$(docker inspect -f '{{.State.StartedAt}}' isobrowser-chrome 2>/dev/null | cut -c1-19)
+  if [ -n "$started" ] && [ $(( $(date -u +%s) - $(date -u -d "$started" +%s) )) -gt 86400 ]; then
+    docker restart isobrowser-chrome >/dev/null && echo "recycled isobrowser-chrome"
+  fi
+  if docker ps --format '{{.Names}}' | grep -qx authichain-agentz && \
+     ! docker exec authichain-agentz test -x /opt/agentz-browser/agentz-browser; then
+    install_agentz
+  fi
+}
+
+case "${1:-status}" in
+  up) up ;; down) down ;; status) status ;; test) test_iso ;;
+  install-agentz) install_agentz ;; ensure) ensure ;;
+  *) echo "usage: $0 up|down|status|test|install-agentz|ensure" >&2; exit 2 ;;
+esac
