@@ -476,7 +476,7 @@ class ResearchInput(BaseModel):
 async def api_agentz_research(data: ResearchInput):
     """Read-only research: TinyFish search, then the top 1-5 results read through
     the network-isolated browser. Returns cited sources; page text is untrusted."""
-    from agentz.core.research import research
+    from agentz.core.web_research import research
     try:
         return await run_in_threadpool(research, data.question, data.n)
     except ValueError as exc:

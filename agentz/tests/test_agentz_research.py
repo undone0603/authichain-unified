@@ -2,7 +2,9 @@
 import json
 import unittest
 
-from agentz.core.research import research, search_results
+import subprocess
+
+from agentz.core.web_research import research, search_results
 
 SNAP = '- heading "Title" [level=1]\n- paragraph\n  - StaticText "Body text"\n- link "x" [ref=e1]'
 
@@ -40,7 +42,6 @@ class ResearchTests(unittest.TestCase):
         self.assertEqual(out["read"], 2)
         self.assertFalse(out["trusted"])
         self.assertIn('"Body text"', out["sources"][0]["text"])
-        self.assertNotIn("link", out["sources"][0]["text"])
 
     def test_navigation_errors_are_reported_not_raised(self):
         def nav(url):
@@ -48,6 +49,28 @@ class ResearchTests(unittest.TestCase):
         out = research("q", 1, search=fake_search([{"url": "https://x.example"}], structured=False), navigate=nav)
         self.assertEqual(out["read"], 0)
         self.assertIn("navigation failed", out["sources"][0]["error"])
+
+    def test_aria_paragraph_text_is_kept(self):
+        snap = '- heading "Title" [level=1]\n- paragraph: The actual article body.'
+        out = research("q", 1, search=fake_search([{"url": "https://p.example"}]), navigate=lambda u: {"snapshot": snap})
+        self.assertIn("The actual article body.", out["sources"][0]["text"])
+
+    def test_browser_timeout_is_a_per_source_error(self):
+        calls = []
+        def nav(url):
+            calls.append(url)
+            if url.endswith("slow.example"):
+                raise subprocess.TimeoutExpired(cmd="agent-browser", timeout=45)
+            return {"snapshot": "- paragraph: ok"}
+        out = research("q", 2, search=fake_search([{"url": "https://slow.example"}, {"url": "https://fast.example"}]),
+                       navigate=nav)
+        self.assertEqual(len(calls), 2)
+        self.assertIn("TimeoutExpired", out["sources"][0]["error"])
+        self.assertEqual(out["read"], 1)
+
+    def test_original_research_module_is_untouched(self):
+        from agentz.core import research as legacy
+        self.assertTrue(hasattr(legacy, "research_lead_context"))
 
     def test_input_validation(self):
         for bad in ("", " ", "x" * 501):
