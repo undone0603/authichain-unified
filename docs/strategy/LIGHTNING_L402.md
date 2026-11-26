@@ -121,7 +121,7 @@ read from the backend, live.
 | Service | Where | Status |
 | --- | --- | --- |
 | `signals` | `worker-app/x402-routes.ts` → `src/lib/l402-signals.ts` | built, off |
-| `notary` | AgentZ (`agentz/core/notary.py`): signs a file's SHA-256 and anchors it in Bitcoin via OpenTimestamps | next PR |
+| `notary` | AgentZ: `POST /agentz/notary/paid` ($0.05, capability `stamp`) → `agentz/core/notary.py`; Python implementation `agentz/core/l402.py` passes the same vectors; one-time claims are files (`AGENTZ_L402_CLAIMS_DIR`) | built, off |
 | `dex` | `undone0603/agentz-dex-terminal` (`signal.authichain.com`) | next PR |
 
 **When L402 is on (signals).** It needs all three of:
