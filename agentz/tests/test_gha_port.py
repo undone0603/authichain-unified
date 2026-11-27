@@ -112,7 +112,7 @@ def test_registry_runner_reports_disabled_execution_as_failed(monkeypatch, tmp_p
     workflow = runner.Workflow(
         id="gha_honest_launch_gate", title="test", priority="medium",
         blocks_revenue=False, handler="handlers.gha_port", type="shell",
-        estimated_minutes=1,
+        estimated_minutes=1, risk_class="low",
     )
     result = runner.execute(workflow, Mode.AUTO, audit_log_path=tmp_path / "runs.jsonl")
     assert result.status == "failed"
