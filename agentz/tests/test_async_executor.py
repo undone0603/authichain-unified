@@ -2,6 +2,7 @@
 import asyncio
 import dataclasses
 import json
+import math
 import time
 
 import httpx
@@ -192,3 +193,151 @@ def test_bounded_queue_applies_backpressure():
         return ex.stats
     stats = run(go())
     assert stats.max_queue_depth <= 4 and stats.succeeded == 20
+
+
+# ---- JSON codec: orjson for speed, stdlib json as the referee --------------------------
+from agentz.core import async_executor as ax
+
+CODEC_VALID = [
+    b'{"a": 1, "b": [true, false, null], "c": "x"}',
+    '{"unicode": "é中\U0001F600"}',
+    b'{"big": 123456789012345678901234567890}',  # beyond 64 bits: orjson rejects, stdlib decodes
+    b'{"nan": NaN, "inf": Infinity, "ninf": -Infinity}',  # stdlib extension orjson refuses
+    b'\xef\xbb\xbf{"bom": true}',  # UTF-8 BOM bytes
+    '{"dup": 1, "dup": 2}',
+    b'[1.5, -0.0, 1e300]',
+    '"just a string"',
+    b"18446744073709551615",  # 2**64 - 1: largest int orjson keeps exact
+    b"18446744073709551616",  # 2**64: orjson would return a float
+    b"-9223372036854775809",  # -2**63 - 1: orjson would return a float
+    b'{"usdc_atomic": 1000000000000000000000001}',
+    b"123456789012345678.5",
+    '{"s": "\\ud800"}',  # escaped lone surrogate
+    '"\ud800"',  # raw lone surrogate in a str: cannot be UTF-8 encoded
+]
+
+
+def _same_typed(a, b):
+    # 1 == 1.0 in Python, so compare types too: a lossy int->float must fail.
+    return type(a) is type(b) and json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
+CODEC_INVALID = [b"", b"not json", b'{"a": }', "{'single': 1}", b"\xff\xfe\x00"]
+
+
+def _same(a, b):
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_same(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_same(x, y) for x, y in zip(a, b))
+    if isinstance(a, float) and isinstance(b, float) and math.isnan(a):
+        return math.isnan(b)
+    return _same_typed(a, b)
+
+
+@pytest.mark.parametrize("data", CODEC_VALID)
+def test_codec_decodes_exactly_like_stdlib(data):
+    assert _same(ax._loads(data), json.loads(data))
+
+
+@pytest.mark.parametrize("data", CODEC_INVALID)
+def test_codec_raises_value_error_where_stdlib_does(data):
+    with pytest.raises(ValueError):
+        json.loads(data)
+    with pytest.raises(ValueError):
+        ax._loads(data)
+
+
+@pytest.mark.parametrize("data", CODEC_VALID)
+def test_codec_falls_back_without_orjson(monkeypatch, data):
+    monkeypatch.setattr(ax, "_orjson", None)
+    assert _same(ax._loads(data), json.loads(data))
+
+
+def test_codec_matches_stdlib_on_random_documents():
+    import random
+    rng = random.Random(20261123)
+
+    def value(depth):
+        kind = rng.randrange(7 if depth < 4 else 4)
+        if kind == 0:
+            return rng.randint(-2**70, 2**70)
+        if kind == 1:
+            return rng.uniform(-1e12, 1e12)
+        if kind == 2:
+            return "".join(chr(rng.randrange(0x20, 0x3000)) for _ in range(rng.randrange(8)))
+        if kind == 3:
+            return rng.choice([True, False, None])
+        if kind in (4, 5):
+            return [value(depth + 1) for _ in range(rng.randrange(4))]
+        return {str(rng.random()): value(depth + 1) for _ in range(rng.randrange(4))}
+
+    for _ in range(500):
+        text = json.dumps(value(0), ensure_ascii=rng.random() < 0.5)
+        assert _same(ax._loads(text), json.loads(text)), text
+        assert _same(ax._loads(text.encode()), json.loads(text.encode())), text
+
+
+def test_orjson_is_active_when_installed():
+    pytest.importorskip("orjson")
+    assert ax._orjson is not None
+
+
+def _text_server(text: str):
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if json.loads(request.content)["method"] == "tools/list":
+            return httpx.Response(200, json={"result": {"tools": TOOLS}})
+        return httpx.Response(200, json={"result": {"content": [{"type": "text", "text": text}]}})
+    return handler
+
+
+@pytest.mark.parametrize("text, expected", [
+    ('{"score": 0.97, "id": "a"}', {"score": 0.97, "id": "a"}),
+    ('{"n": 123456789012345678901234567890}', {"n": 123456789012345678901234567890}),
+    ("plain text, not JSON", "plain text, not JSON"),
+])
+def test_tool_text_content_decodes_like_before(text, expected):
+    async def go():
+        reg = dataclasses.replace(m.load_registry(), endpoint="http://mock/mcp")
+        async with AsyncCapabilityExecutor(reg, transport=httpx.MockTransport(_text_server(text)),
+                                           backoff_s=0.0) as ex:
+            return await ex.submit(ToolCall("authichain.mcp.get_pricing"))
+    res = run(go())
+    assert res.ok and res.result == expected
+
+
+def test_non_json_response_body_is_a_transport_error_and_retried():
+    hits = {"call": 0}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if json.loads(request.content)["method"] == "tools/list":
+            return httpx.Response(200, json={"result": {"tools": TOOLS}})
+        hits["call"] += 1
+        return httpx.Response(200, content=b"<html>gateway</html>")
+
+    async def go():
+        reg = dataclasses.replace(m.load_registry(), endpoint="http://mock/mcp")
+        async with AsyncCapabilityExecutor(reg, transport=httpx.MockTransport(handler),
+                                           backoff_s=0.0, max_attempts=2) as ex:
+            return await ex.submit(ToolCall("authichain.mcp.get_pricing"))
+    res = run(go())
+    assert not res.ok and res.error == "transport_error: JSONDecodeError"
+    assert res.attempts == 2 and hits["call"] == 2
+
+
+def test_requests_still_refuse_nan_arguments():
+    """orjson would encode NaN as null; requests stay on httpx's allow_nan=False encoder."""
+    sent = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if body["method"] == "tools/list":
+            return httpx.Response(200, json={"result": {"tools": TOOLS}})
+        sent.append(body)
+        return httpx.Response(200, json={"result": {"content": []}})
+
+    async def go():
+        reg = dataclasses.replace(m.load_registry(), endpoint="http://mock/mcp")
+        async with AsyncCapabilityExecutor(reg, transport=httpx.MockTransport(handler),
+                                           backoff_s=0.0, max_attempts=1) as ex:
+            return await ex.submit(ToolCall("authichain.mcp.get_pricing", {"x": float("nan")}))
+    res = run(go())
+    assert not res.ok and res.error.startswith("transport_error") and sent == []

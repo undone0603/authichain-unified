@@ -174,6 +174,25 @@ secrets or sensitive outputs belong here.
   nonce `0xa40b654f…0cba7a`); the owner's $1.00 plain send is not proven
   (no AuthorizationUsed log, sender is not a facilitator signer).
 
+### 10. Executor JSON decode on orjson, bottleneck re-measured (2026-11-23)
+
+- **Implemented.** `agentz/core/async_executor.py` now decodes RPC bodies and
+  tool text with `_loads`, which uses orjson and falls back to the stdlib. It is
+  lossless: any input with a 19-digit run goes to `json.loads`, because orjson
+  turns integers above 64 bits (atomic USDC or wei amounts) into floats without
+  warning. The request encoder is unchanged: orjson would send NaN as `null`.
+- **Tested.** `python -m pytest -q agentz/tests/test_async_executor.py`: 58
+  passed. 42 of those are new: stdlib parity on edge cases, 500 random
+  documents, the no-orjson fallback, the precision guard, a non-JSON body still
+  retried as `transport_error: JSONDecodeError`, and NaN arguments still
+  refused before sending. With the guard removed, 6 tests fail.
+  `python -m pytest -q agentz/tests`: 516 passed, 1 skipped.
+- **Measured.** Decoding is 1.8 to 2.8 times faster in isolation. End to end,
+  the change is within noise and the 24,000/min ceiling did not move. A cProfile
+  shows that httpcore's per-request pool scan and anyio overhead dominate. See
+  `performance.md` (2026-11-23) and
+  `docs/agentz/evidence/perf-orjson-decode-2026-11-23.json`.
+
 ## Owner decisions that unblock agent sales
 
 1. **Done:** authichain-com redeployed.
@@ -198,3 +217,11 @@ secrets or sensitive outputs belong here.
 2. Wire `/control-plane/state` as a read-only registry capability.
 3. Inspect StrainChain, GovChain and GS1 code and classify them with evidence.
 4. Read-only customer entitlement visibility, without charging.
+5. Executor throughput: shard the httpx pool or trial an aiohttp transport,
+   then re-run `mcp_bench ramp --levels 12000,24000 --concurrency 128` before
+   and after (`performance.md`, "Candidate fixes, re-ranked by the profile").
+   JSON decode is done and ruled out.
+
+Note (2026-11-23 routine): `api.taskmarket.dev` and `authichain.com` are not
+reachable from the cloud routine sandbox (proxy 403). Live-endpoint items
+(taskmarket pick, verify_request re-run) need the owner's host.

@@ -1,0 +1,165 @@
+{
+  "date": "2026-11-23",
+  "change": "AsyncCapabilityExecutor decodes responses with orjson (lossless guard, stdlib fallback)",
+  "environment": {
+    "host": "ephemeral cloud VM (not the owner's WSL host)",
+    "cpus": 4,
+    "python": "3.11.18",
+    "mock_latency_ms": 20.0,
+    "mock_fail_rate": 0.0,
+    "workload": [
+      "authichain.mcp.get_pricing",
+      "authichain.mcp.query_provenance",
+      "authichain.mcp.verify_attestation",
+      "authichain.mcp.verify_record",
+      "authichain.mcp.dpp_readiness_check",
+      "authichain.mcp.scan_living_qr",
+      "authichain.mcp.negotiate"
+    ],
+    "base_revision": "288d0c7"
+  },
+  "command": "python -m agentz.bench.mcp_bench ramp --levels 12000,24000 --seconds 30 --concurrency 128 (before = git stash of the change, after = branch), two interleaved pairs",
+  "paired_runs": {
+    "before_run1": [
+      {
+        "target_per_min": 12000,
+        "success_per_min": 11998.7,
+        "success_rate": 1.0,
+        "p50_ms": 22.87,
+        "p95_ms": 24.97,
+        "p99_ms": 27.4,
+        "p95_queue_ms": 0.14,
+        "client_cpu_pct": 30.0,
+        "server_cpu_pct": 7.7,
+        "abort_reason": null,
+        "passed": true
+      },
+      {
+        "target_per_min": 24000,
+        "success_per_min": 23999.5,
+        "success_rate": 1.0,
+        "p50_ms": 23.99,
+        "p95_ms": 1353.18,
+        "p99_ms": 1792.08,
+        "p95_queue_ms": 922.86,
+        "client_cpu_pct": 70.1,
+        "server_cpu_pct": 12.6,
+        "abort_reason": "p99 2017 ms over ceiling",
+        "passed": false
+      }
+    ],
+    "after_run1": [
+      {
+        "target_per_min": 12000,
+        "success_per_min": 11998.0,
+        "success_rate": 1.0,
+        "p50_ms": 22.65,
+        "p95_ms": 24.45,
+        "p99_ms": 26.07,
+        "p95_queue_ms": 0.13,
+        "client_cpu_pct": 27.7,
+        "server_cpu_pct": 7.4,
+        "abort_reason": null,
+        "passed": true
+      },
+      {
+        "target_per_min": 24000,
+        "success_per_min": 24003.4,
+        "success_rate": 1.0,
+        "p50_ms": 25.7,
+        "p95_ms": 1274.43,
+        "p99_ms": 1657.22,
+        "p95_queue_ms": 805.49,
+        "client_cpu_pct": 79.2,
+        "server_cpu_pct": 13.2,
+        "abort_reason": "p99 2006 ms over ceiling",
+        "passed": false
+      }
+    ],
+    "before_run2": [
+      {
+        "target_per_min": 12000,
+        "success_per_min": 11999.8,
+        "success_rate": 1.0,
+        "p50_ms": 22.79,
+        "p95_ms": 24.7,
+        "p99_ms": 26.84,
+        "p95_queue_ms": 0.14,
+        "client_cpu_pct": 29.2,
+        "server_cpu_pct": 7.4,
+        "abort_reason": null,
+        "passed": true
+      },
+      {
+        "target_per_min": 24000,
+        "success_per_min": 23999.8,
+        "success_rate": 1.0,
+        "p50_ms": 151.57,
+        "p95_ms": 1220.36,
+        "p99_ms": 1610.08,
+        "p95_queue_ms": 698.57,
+        "client_cpu_pct": 80.0,
+        "server_cpu_pct": 12.4,
+        "abort_reason": "p99 2059 ms over ceiling",
+        "passed": false
+      }
+    ],
+    "after_run2": [
+      {
+        "target_per_min": 12000,
+        "success_per_min": 11997.9,
+        "success_rate": 1.0,
+        "p50_ms": 22.62,
+        "p95_ms": 24.42,
+        "p99_ms": 26.64,
+        "p95_queue_ms": 0.12,
+        "client_cpu_pct": 27.2,
+        "server_cpu_pct": 7.2,
+        "abort_reason": null,
+        "passed": true
+      },
+      {
+        "target_per_min": 24000,
+        "success_per_min": 23999.9,
+        "success_rate": 1.0,
+        "p50_ms": 160.76,
+        "p95_ms": 1430.26,
+        "p99_ms": 1849.73,
+        "p95_queue_ms": 980.85,
+        "client_cpu_pct": 82.5,
+        "server_cpu_pct": 12.7,
+        "abort_reason": "p99 2148 ms over ceiling",
+        "passed": false
+      }
+    ]
+  },
+  "decode_microbench_us_per_call": {
+    "note": "timeit, 50,000 iterations, same VM; mock-shaped payloads",
+    "rpc_envelope_682B_bytes": {
+      "stdlib_json": 5.29,
+      "_loads": 1.88,
+      "speedup": 2.81
+    },
+    "tool_text_513B_str": {
+      "stdlib_json": 4.13,
+      "_loads": 2.25,
+      "speedup": 1.84
+    },
+    "rejected_variant_regex_prescan": {
+      "orjson_only": 1.36,
+      "regex_[0-9]{19}_search": 6.73,
+      "verdict": "regex cost as much as the stdlib parse; replaced by bytes.translate + substring search (0.77 us)"
+    }
+  },
+  "profile_12000_per_min_15s_cprofile": {
+    "note": "cProfile inflates CPU; relative ranking only",
+    "top_client_costs": [
+      "select.epoll.poll 5.16 s tottime (idle wait)",
+      "httpcore connection_pool._assign_requests_to_connections 1.59 s cumulative over 6,536 calls (~0.24 ms each)",
+      "httpcore is_idle checks: 289,231 calls (~44 per request: linear scan of the 128-connection pool)",
+      "anyio socket extra_attributes 0.56 s cumulative; anyio/sniffio context wrappers ~0.5 s",
+      "JSON decode: not in the top 25"
+    ]
+  },
+  "conclusion": "Decode is 1.8-2.8x faster in isolation and value-identical to json.loads, but end to end the client-CPU difference at 12,000/min (30.0/29.2% before vs 27.7/27.2% after) is about run-to-run noise, and both versions abort at 24,000/min on the p99 rule. JSON was not the bottleneck; httpcore's per-request pool scan and anyio overhead are."
+}

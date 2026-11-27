@@ -68,6 +68,47 @@ refused before any network call.
 ## Next bottleneck
 
 Above about 8,000/min the client's single event loop is the limit: tail latency
-climbs while p50 stays flat and client CPU nears half a core. Candidate fixes,
-in order: a faster JSON codec (`orjson` is already pinned), fewer per-call
-allocations, then one executor process per core.
+climbs while p50 stays flat and client CPU nears half a core.
+
+### 2026-11-23: JSON codec ruled out
+
+The first candidate fix was a faster JSON codec. `AsyncCapabilityExecutor` now
+decodes responses with orjson (`_loads` in `agentz/core/async_executor.py`).
+The decoder gives the same value as `json.loads` and raises `ValueError` where
+the stdlib does: any input with a 19-digit run goes to the stdlib, because
+orjson silently turns integers outside [-2^63, 2^64) into floats. Anything
+orjson rejects (NaN, BOM, lone surrogates) is re-decoded by the stdlib. Requests
+still use httpx's stdlib encoder, because orjson would send NaN as `null` where
+httpx refuses it.
+
+Measured on an ephemeral 4-CPU cloud VM with Python 3.11.18. This is not the
+host in the table above, so compare within this section only.
+
+| Measure | Before | After |
+| --- | --- | --- |
+| Decode of a 682 B RPC envelope | 5.29 µs | 1.88 µs (2.8×) |
+| Decode of 513 B of tool text | 4.13 µs | 2.25 µs (1.8×) |
+| Client CPU at 12,000/min, concurrency 128 (two runs) | 30.0% / 29.2% | 27.7% / 27.2% |
+| p99 at 12,000/min (two runs) | 27.4 / 26.8 ms | 26.1 / 26.6 ms |
+| 24,000/min | aborted, p99 over 2,000 ms (both runs) | aborted, p99 over 2,000 ms (both runs) |
+
+The end-to-end difference is about the size of run-to-run noise, and the
+ceiling did not move. At roughly 1.5 ms of client CPU per call, JSON was never
+the cost.
+
+A cProfile at 12,000/min puts the time in the HTTP stack. httpcore's
+`_assign_requests_to_connections` takes about 0.24 ms per request and calls
+`is_idle` about 44 times per request, which is a linear scan of the 128-connection
+pool. anyio and sniffio context wrappers come next. JSON decoding is not in the
+top 25.
+
+Evidence: `docs/agentz/evidence/perf-orjson-decode-2026-11-23.json`.
+
+### Candidate fixes, re-ranked by the profile
+
+1. Cut httpcore's per-request pool scan. Either shard calls over several smaller
+   `AsyncClient` pools (for example 4 × 32 connections), or use a transport
+   without the O(pool) assignment step (for example aiohttp, already pinned).
+   Re-run the 12,000 and 24,000 levels as above.
+2. One executor process per core.
+3. Fewer per-call allocations. This is low value per the profile.
