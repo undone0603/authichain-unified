@@ -127,7 +127,7 @@ test("Worker dry-run uses supported step workdirs and lockfile cache path", () =
     workflow.includes(
       "(github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && " +
         "vars.AUTHICHAIN_CI_SELF_HOSTED == 'true' && fromJSON(" + // pragma: allowlist secret
-        `'["self-hosted","Linux","ARM64","authichain-ops"]'` + // pragma: allowlist secret
+        `format('["self-hosted","Linux","ARM64","{0}"]', github.event_name == 'pull_request' && 'authichain-ci' || 'authichain-ops')` + // pragma: allowlist secret
         ") || 'ubuntu-24.04' }} # pragma: allowlist secret"
     )
   );
