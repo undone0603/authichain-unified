@@ -29,7 +29,7 @@ only**; it does not expose a remote endpoint or enable browser execution.
 Run focused tests:
 
 ```bash
-python -m unittest tests/test_agentz_capability_policy.py
+python -m unittest agentz/tests/test_agentz_capability_policy.py
 ```
 
 

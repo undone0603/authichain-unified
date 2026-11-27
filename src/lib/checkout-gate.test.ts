@@ -239,9 +239,51 @@ describe("tryHandleGatedCheckout — POST", () => {
     expect(body.get("metadata[utm_source]")).toBe("mail");
     expect(body.get("client_reference_id")).toBe("v_1");
     expect(body.get("after_expiration[recovery][enabled]")).toBe("true");
+    expect(body.get("success_url")).toContain(
+      "https://authichain.com/generate?paid=1"
+    );
+    expect(body.get("cancel_url")).toContain(
+      "https://authichain.com/generate?cancelled=1"
+    );
+    expect(body.get("success_url")).not.toContain("govchain.us");
+    expect(body.get("cancel_url")).not.toContain("govchain.us");
     expect(fetchImpl.mock.calls[0]![1]?.headers).toMatchObject({
       "Idempotency-Key": "12345678-1234-4234-8234-123456789abc",
     });
+  });
+
+  it("keeps Stripe return URLs on the host the buyer posted from", async () => {
+    const fetchImpl = stripeOk();
+    const res = await tryHandleGatedCheckout(
+      new Request("https://authichain.govchain.us/checkout/dpp_readiness", {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": HUMAN_UA,
+          origin: "https://authichain.govchain.us",
+        },
+        body: new URLSearchParams({
+          email: "buyer@brand.com",
+          visit_id: "v_gov",
+          checkout_key: "12345678-1234-4234-8234-123456789abd",
+        }).toString(),
+      }),
+      { STRIPE_SECRET_KEY: "sk_test_x" },
+      { fetchImpl, ...protection }
+    );
+    expect(res!.status).toBe(303);
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [
+      string,
+      { body: URLSearchParams },
+    ];
+    const body = new URLSearchParams(String(init.body));
+    expect(body.get("success_url")).toContain(
+      "https://authichain.govchain.us/dpp/thanks"
+    );
+    expect(body.get("cancel_url")).toContain(
+      "https://authichain.govchain.us/dpp?cancelled=1"
+    );
+    expect(body.get("success_url")).not.toContain("https://authichain.com/");
   });
 
   it("reuses the form idempotency key after a Stripe network failure", async () => {

@@ -25,6 +25,32 @@ COPY requirements-agentz.txt /tmp/requirements-agentz.txt
 RUN pip install --no-cache-dir -r /tmp/requirements-agentz.txt \
     && rm -rf /root/.cache/pip
 
+# agent-browser CLI for AGENTZ_BROWSER_BIN (public navigation + GitHub inspection).
+# Pinned release binary, sha256-verified per arch. It only drives an external,
+# network-isolated browser over CDP (see agentz/runtime/agentz-browser); it is
+# never pointed at this image's own Chromium.
+FROM python:3.12-slim AS agent_browser
+ARG TARGETARCH
+ARG AGENT_BROWSER_VERSION=0.43.0
+RUN python - <<'EOF'
+import hashlib, os, urllib.request
+arch = os.environ.get("TARGETARCH") or "arm64"
+sha = {
+    "arm64": "34be55c2b92d8d199fb9d1d62a905ee5b6ac5b1f3e8c24e5b20597f370d905e5",
+    "amd64": "8e69c9fb662514c9cf36e4911e94e913742ba066e55102486350e049dd847612",
+}[arch]
+name = {"arm64": "agent-browser-linux-arm64", "amd64": "agent-browser-linux-x64"}[arch]
+ver = os.environ["AGENT_BROWSER_VERSION"]
+url = f"https://github.com/vercel-labs/agent-browser/releases/download/v{ver}/{name}"
+data = urllib.request.urlopen(url, timeout=120).read()
+got = hashlib.sha256(data).hexdigest()
+assert got == sha, f"agent-browser sha256 mismatch: {got}"
+os.makedirs("/out", exist_ok=True)
+with open("/out/agent-browser", "wb") as fh:
+    fh.write(data)
+os.chmod("/out/agent-browser", 0o755)
+EOF
+
 FROM python:3.12-slim
 
 # Default image user. Host switch often runs as the laptop uid instead;
@@ -42,7 +68,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     XDG_CACHE_HOME=/app/.xdg/cache \
     XDG_DATA_HOME=/app/.xdg/data \
     XDG_RUNTIME_DIR=/tmp/agentz-runtime \
-    BROWSER_USE_CONFIG_DIR=/app/.xdg/config/browseruse
+    BROWSER_USE_CONFIG_DIR=/app/.xdg/config/browseruse \
+    AGENTZ_BROWSER_BIN=/opt/agentz-browser/agentz-browser
 
 COPY --from=wheels /opt/venv /opt/venv
 
@@ -64,6 +91,12 @@ RUN useradd --create-home --uid ${AGENTZ_UID} --shell /usr/sbin/nologin agentz \
 WORKDIR /app
 COPY --chown=agentz:agentz requirements-agentz.txt .
 COPY --chown=agentz:agentz agentz ./agentz
+# Published bot identities: agentz/core/identity.py reads this (GET /identity).
+COPY --chown=agentz:agentz workers/authichain-com/src/bot-identities.ts ./workers/authichain-com/src/bot-identities.ts
+# Root-owned, read-only for the runtime user: AgentZ can run but not replace these.
+COPY --from=agent_browser /out/agent-browser /opt/agentz-browser/agent-browser
+COPY agentz/runtime/agentz-browser /opt/agentz-browser/agentz-browser
+RUN chmod 755 /opt/agentz-browser /opt/agentz-browser/agent-browser /opt/agentz-browser/agentz-browser
 
 # Runtime-written dirs: group 0 + g=u so any uid in group 0 can write
 # (`docker run --user <host-uid> --group-add 0`). Not world-writable.

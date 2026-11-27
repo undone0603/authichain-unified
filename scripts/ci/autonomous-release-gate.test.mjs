@@ -17,6 +17,8 @@ function fixture() {
       statuses: REQUIRED.map(context => ({context, state: 'success', target_url: URL}))},
   };
 }
+const OWNER_REVIEW = () => ({type: 'required_reviewers', prevent_self_review: true,
+  reviewers: [{type: 'User', reviewer: {login: 'Z-kie'}}]});
 function rejects(change, why) {const x=fixture();change(x);assert.throws(() => assertReleasePolicy(x), why);}
 
 test('accepts exact main SHA, protected branch, no human gate and all seven successful jobs', () => {
@@ -85,6 +87,16 @@ test('requires the exact environment and protected branch restrictions', () => {
   rejects(x => x.environment.deployment_branch_policy.custom_branch_policies = true, /environment/);
   rejects(x => x.environment.protection_rules = [{type: 'required_reviewers'}], /environment/);
   rejects(x => x.environment.protection_rules = [{type: 'wait_timer'}], /environment/);
+  // Owner-chosen human gate (2026-11-25): one named reviewer who is not the dispatcher.
+  const reviewed = fixture();
+  reviewed.environment.protection_rules = [{type: 'branch_policy'}, OWNER_REVIEW()];
+  assert.deepEqual(assertReleasePolicy(reviewed), {sha: SHA, checks: 7, environment: ENV});
+  rejects(x => x.environment.protection_rules = [{...OWNER_REVIEW(), reviewers: []}], /environment/);
+  rejects(x => x.environment.protection_rules = [{...OWNER_REVIEW(), prevent_self_review: false}], /environment/);
+  rejects(x => x.environment.protection_rules = [{...OWNER_REVIEW(), prevent_self_review: undefined}], /environment/);
+  rejects(x => x.environment.protection_rules = [OWNER_REVIEW(), OWNER_REVIEW()], /environment/);
+  rejects(x => x.environment.protection_rules = [OWNER_REVIEW(), {type: 'wait_timer', wait_timer: 0}], /environment/);
+  rejects(x => x.environment.protection_rules = [{type: 'branch_policy'}, OWNER_REVIEW(), {type: 'custom'}], /environment/);
   // GitHub API echo of protected_branches — must still pass.
   const withBranchPolicy = fixture();
   withBranchPolicy.environment.protection_rules = [{type: 'branch_policy'}];

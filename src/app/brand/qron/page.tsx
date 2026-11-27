@@ -98,15 +98,15 @@ export default function QRONHome() {
               <p className="text-sm text-zinc-400 mb-6">Become a QRON reseller for print shops and agencies</p>
               <div className="text-3xl font-black mb-6">30%<span className="text-lg text-zinc-500"> margin</span></div>
               <ul className="space-y-2 text-xs text-zinc-400">
-                <li>✓ Per-scan revenue share</li>
+                <li>✓ Print-shop and agency channel</li>
                 <li>✓ White-label option</li>
                 <li>✓ Dedicated support</li>
               </ul>
             </div>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-8">
               <h3 className="text-lg font-black mb-4">Scan Analytics</h3>
-              <p className="text-sm text-zinc-400 mb-6">Monetize through per-scan metering</p>
-              <div className="text-3xl font-black mb-6">$0.001<span className="text-lg text-zinc-500">-$0.01</span></div>
+              <p className="text-sm text-zinc-400 mb-6">Real-time scan dashboards</p>
+              <div className="text-3xl font-black mb-6">Analytics</div>
               <ul className="space-y-2 text-xs text-zinc-400">
                 <li>✓ SaaS billing model</li>
                 <li>✓ Real-time dashboards</li>

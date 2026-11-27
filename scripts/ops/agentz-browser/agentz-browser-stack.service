@@ -1,0 +1,7 @@
+[Unit]
+Description=Ensure AgentZ network-isolated browser host (squid egress + headless Chromium + CDP relay)
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/zac/bin/agentz-browser-stack ensure

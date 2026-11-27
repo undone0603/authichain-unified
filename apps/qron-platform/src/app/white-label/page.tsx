@@ -65,7 +65,7 @@ export default function WhiteLabelPage() {
             {
               icon: DollarSign,
               title: 'New Revenue Streams',
-              desc: 'Charge your clients a premium for "Smart Labels." You pay fractions of a cent per scan, you keep the margin.'
+              desc: 'Charge your clients a premium for "Smart Labels." You keep the margin.'
             },
             {
               icon: Zap,

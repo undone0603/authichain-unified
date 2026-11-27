@@ -10,7 +10,7 @@
  *   are increasingly flagging" a gap and promised a "DFARS 252.204-7012 /
  *   NIST 800-171 audit trail"; told cannabis MSOs about a "METRC sync" and an
  *   "ISO 18013-5" passport export (18013-5 is the mobile driving licence
- *   standard); and offered QRON's "white-label API from $0.002/QR", which no
+ *   standard); and offered a white-label API unit price that no
  *   price in the catalogue backs. None of that was true.
  * - Prices and payment links come from plans.ts. The old StrainChain link
  *   ("StrainChain Basic", buy.stripe.com/9B6cN5...) is not a plan anywhere in

@@ -44,7 +44,7 @@ describe("DPP atomic grant isolated PostgreSQL replay", () => {
     `);
     await db.exec(readFileSync(MIGRATION, "utf8"));
     await db.query("INSERT INTO public.profiles(id,generations_limit,generations_used) VALUES ($1::uuid, 100, 0),($2::uuid, 0, 0)", [A,B]);
-  });
+  }, 120_000);
   afterAll(async () => { if (db) await db.close(); });
 
   it("one grant, exact replay, and replay after a different grant never double-credit", async () => {

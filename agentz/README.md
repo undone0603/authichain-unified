@@ -11,7 +11,13 @@ The `agentz/` directory contains the control-plane layer for autonomous operatio
 
 ## Getting Started
 
-1. Set up Python environment: `pip install -r requirements-agentz.txt`
+1. Install AgentZ as a package, pinned to the host lock, from the repo root:
+   `pip install -c requirements-agentz.txt -e '.[test]'`.
+   This adds an `agentz` command that works from any folder. The editable
+   install runs the checkout's code, the same as `python -m agentz.cli` did.
+   `requirements-agentz.txt` stays the exact lock for the protected host image.
+   The release unit is the wheel: `pip wheel --no-deps .` builds `agentz-<version>.whl`,
+   with the version taken from `agentz/__init__.py`.
 2. Configure environment variables.
 3. List workflows: `python -m agentz.cli list`
 4. Credential inventory (names, status, length — never values): `python -m agentz.cli creds --critical`
@@ -142,4 +148,14 @@ their speech provider. Use typed input if fully local speech transcription is
 required. Browser speech synthesis is used for spoken answers. This console
 is intentionally localhost-only and disabled unless opted in. The vision
 endpoint and tests are at `agentz/api/voice_vision.py` and
-`tests/test_agentz_voice_vision.py`.
+`agentz/tests/test_agentz_voice_vision.py`.
+
+## CI scope
+
+CircleCI reports `ci/circleci: agentz-quality-gate` for AgentZ and
+`ci/circleci: authichain-quality-gate` for the web app; the required
+`ci/circleci: main-quality-gate` passes when both do. A PR that only touches
+`agentz/`, `docs/agentz/`, `pyproject.toml` or `requirements-agentz.txt`
+skips the AuthiChain jobs, and a PR confined to AuthiChain app roots skips the
+AgentZ job. The rules, and what counts as shared, live in
+`scripts/ci/ci-scope.mjs`. Anything shared or unclear runs both.

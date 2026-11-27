@@ -28,7 +28,7 @@ const TOPICS = [
   { slug: 'coa-hashing-for-cannabis', title: 'COA Hashing: Making Lab Results Tamper-Evident',
     angle: 'Why a PDF certificate proves nothing, and how hashing plus METRC sync makes tampering detectable.' },
   { slug: 'anti-counterfeit-economics', title: 'The Real Cost of Counterfeits (And What Verification Saves)',
-    angle: 'Quantify counterfeit loss, then show the per-scan cost of verification against it.' },
+    angle: 'Quantify counterfeit loss, then show how cryptographic verification compares against that loss.' },
   { slug: 'blockchain-without-the-hype', title: 'Blockchain Provenance Without the Hype',
     angle: 'Exactly which parts belong on-chain versus off-chain, and why anchoring beats storing.' },
   { slug: 'espr-delegated-acts-timeline', title: 'ESPR Delegated Acts: Your 2027 Compliance Timeline',

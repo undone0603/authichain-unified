@@ -42,13 +42,19 @@ export function assertReleasePolicy({repo, expectedSha, dispatchSha, branch, rul
         (!Array.isArray(ruleset?.bypass_actors) || ruleset.bypass_actors.length === 0),
         'protected main PR ruleset missing, disabled, or bypassable');
   // GitHub mirrors protected_branches into protection_rules as type
-  // branch_policy. Allow that echo; reject wait_timer / required_reviewers.
+  // branch_policy. Allow that echo, plus at most one owner review gate
+  // (owner, 2026-11-25): required_reviewers naming at least one reviewer, with
+  // self-review prevented. Reject wait_timer and every other rule.
   const envRules = Array.isArray(environment?.protection_rules) ? environment.protection_rules : null;
-  const humanEnvRules = (envRules || []).filter(rule => rule?.type !== 'branch_policy');
+  const otherEnvRules = (envRules || []).filter(rule => rule?.type !== 'branch_policy');
+  const ownerReview = rule => rule?.type === 'required_reviewers' && rule.prevent_self_review === true &&
+        Array.isArray(rule.reviewers) && rule.reviewers.length > 0;
+  const allowedEnvRules = otherEnvRules.length === 0 ||
+        (otherEnvRules.length === 1 && ownerReview(otherEnvRules[0]));
   guard(environment?.name === ENV && environment?.deployment_branch_policy?.protected_branches === true &&
         environment?.deployment_branch_policy?.custom_branch_policies === false &&
-        envRules !== null && humanEnvRules.length === 0,
-        'environment must be protected-branches-only with no manual approval, wait timer, or unknown rule');
+        envRules !== null && allowedEnvRules,
+        'environment must be protected-branches-only with at most one owner review gate and no wait timer or unknown rule');
   guard(Number.isInteger(statuses?.total_count) && statuses.total_count >= REQUIRED.length &&
         statuses.total_count <= 100 && Array.isArray(statuses?.statuses) &&
         statuses.statuses.length === statuses.total_count, 'missing/incomplete commit-status evidence');

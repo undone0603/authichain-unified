@@ -1,0 +1,337 @@
+#!/usr/bin/env bash
+# agentz: terminal front end for the local AgentZ API (authichain-agentz container, 127.0.0.1:8000).
+# Same verbs as "@agentz <verb>" in GitHub comments. AGENT_SECRET is read from the env file
+# and never printed. Windows: agentz.cmd forwards here through WSL.
+set -uo pipefail
+
+API="${AGENTZ_API:-http://127.0.0.1:8000}"
+ENV_FILE="${AGENTZ_ENV_FILE:-$HOME/.config/agentz/env}"
+C=authichain-agentz
+
+die() { echo "agentz: $*" >&2; exit 1; }
+have_jq() { command -v jq >/dev/null 2>&1; }
+
+secret() {
+  [ -r "$ENV_FILE" ] || die "$ENV_FILE not readable"
+  local s; s=$(grep -E '^AGENT_SECRET=' "$ENV_FILE" | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//')
+  [ -n "$s" ] || die "AGENT_SECRET missing in $ENV_FILE"
+  printf '%s' "$s"
+}
+
+# call METHOD PATH [JSON] -> body on stdout; non-2xx -> body on stderr, exit 1
+call() {
+  local m="$1" p="$2" b="${3:-}" out code
+  local args=(-sS -m "${AGENTZ_TIMEOUT:-150}" -X "$m" -H "Authorization: Bearer $(secret)" -w $'\n%{http_code}')
+  [ -n "$b" ] && args+=(-H 'Content-Type: application/json' --data-binary "$b")
+  out=$(curl "${args[@]}" "$API$p") || die "cannot reach $API (is $C running? try: agentz up)"
+  code="${out##*$'\n'}"; out="${out%$'\n'*}"
+  if [[ "$code" == 2* ]]; then printf '%s\n' "$out"; else printf 'HTTP %s %s\n' "$code" "$out" >&2; return 1; fi
+}
+
+pretty() { if have_jq; then jq "${@:-.}"; else python3 -m json.tool; fi; }
+
+usage() {
+  cat <<'EOF'
+agentz (short: z) - talk to AgentZ from a terminal (same verbs as "@agentz <verb>" in a GitHub comment)
+
+  z                        status            z w [filter]     workflows
+  z example.com            browse            z run <id>       dry-run a workflow
+  z "your question"        research          z b|r|s          browse | research | status
+  z verify                 prove key possession     z verify --publish   + public signed proof (gist)
+
+  agentz status                    service, identity, isolated browser, workflow count
+  agentz browse <https-url>        read a public page through the isolated browser
+  agentz research "<question>" [-n 5]  search + read top results -> cited note (~/.local/share/agentz/research)
+  agentz workflows [filter]        list workflow ids (optionally filtered)
+  agentz run <id> [k=v ...]        run a workflow in DRY-RUN (k=v become JSON parameters)
+  agentz run <id> --live [k=v ...] run live (asks for confirmation; email/outreach stays owner-gated)
+  agentz results | agents | launch | score | control | identity
+  agentz api <METHOD> <path> [json] raw authenticated API call
+  agentz cli <args...>             python -m agentz.cli inside the container
+  agentz browser up|down|status|test   manage the isolated browser host
+  agentz up | logs                 start the AgentZ container / tail its logs
+
+Env: AGENTZ_API (default http://127.0.0.1:8000), AGENTZ_RAW=1 for unformatted JSON.
+EOF
+}
+
+kv_json() { # k=v ... -> JSON object (values parsed as JSON when valid, else string)
+  python3 - "$@" <<'PY'
+import json, sys
+out = {}
+for a in sys.argv[1:]:
+    if "=" not in a:
+        sys.exit(f"agentz: expected k=v, got {a!r}")
+    k, v = a.split("=", 1)
+    try: out[k] = json.loads(v)
+    except ValueError: out[k] = v
+print(json.dumps(out))
+PY
+}
+
+# python -m agentz.cli inside the container, with the env file parsed exactly like the
+# container entrypoint does (docker exec does not inherit the entrypoint's loaded env).
+agentz_cli() {
+  docker exec -i $C python3 -c '
+import os, sys
+env = dict(os.environ)
+for l in open("/run/agentz/env", encoding="utf-8").read().splitlines():
+    l = l.strip()
+    if not l or l.startswith("#") or "=" not in l: continue
+    if l.startswith("export "): l = l[7:].lstrip()
+    k, v = l.split("=", 1); k = k.strip(); v = v.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'"'"'": v = v[1:-1]
+    env[k] = v
+os.execvpe("python", ["python", "-m", "agentz.cli", *sys.argv[1:]], env)' "$@"
+}
+
+# research "<question>" [-n N]: TinyFish search -> read top N via the isolated browser
+# -> cited markdown note in $AGENTZ_RESEARCH_DIR. Collects and cites; it does not summarize.
+research() {
+  local n=5 q=()
+  while [ $# -gt 0 ]; do
+    case "$1" in -n|--n) n="$2"; shift 2 ;; *) q+=("$1"); shift ;; esac
+  done
+  local question="${q[*]}"
+  [ -n "$question" ] || die 'usage: agentz research "<question>" [-n 5]'
+  local dir="${AGENTZ_RESEARCH_DIR:-$HOME/.local/share/agentz/research}"; mkdir -p "$dir"
+  echo "searching: $question" >&2
+  local sr; sr=$(agentz_cli tinyfish search "$question") || die "search failed"
+  local secret; secret=$(secret)
+  AGENTZ_SEARCH="$sr" AGENTZ_Q="$question" AGENTZ_N="$n" AGENTZ_DIR="$dir" \
+  AGENTZ_API="$API" AGENTZ_SECRET_VALUE="$secret" python3 - <<'PY'
+import datetime, json, os, re, sys, urllib.error, urllib.request
+
+q, n, out_dir, api = os.environ["AGENTZ_Q"], int(os.environ["AGENTZ_N"]), os.environ["AGENTZ_DIR"], os.environ["AGENTZ_API"]
+secret = os.environ.pop("AGENTZ_SECRET_VALUE")
+raw = json.loads(os.environ["AGENTZ_SEARCH"])
+results = []
+sc = raw.get("structured_content")
+if isinstance(sc, dict) and isinstance(sc.get("results"), list):
+    results = list(sc["results"])
+if not results:  # fall back to JSON carried in the text content blocks
+    for c in raw.get("content") or []:
+        try:
+            results += json.loads(c).get("results", [])
+        except (ValueError, AttributeError, TypeError):
+            pass
+results = [r for r in results if str(r.get("url", "")).startswith("https://")][:n]
+if not results:
+    sys.exit("agentz: search returned no https results")
+
+def navigate(url):
+    req = urllib.request.Request(api + "/agentz/browser/navigate", method="POST",
+        data=json.dumps({"url": url}).encode(),
+        headers={"Authorization": f"Bearer {secret}", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=150) as r:
+            return json.load(r).get("snapshot", ""), None
+    except urllib.error.HTTPError as e:
+        return "", f"HTTP {e.code}: {e.read()[:200].decode('utf-8', 'replace')}"
+    except Exception as e:
+        return "", f"{type(e).__name__}: {e}"
+
+now = datetime.datetime.now(datetime.timezone.utc)
+lines = [f"# Research: {q}", "",
+         f"- collected: {now:%Y-%m-%d %H:%M}Z by AgentZ (TinyFish search + network-isolated browser)",
+         "- page text below is untrusted third-party content, quoted for reference; not verified, not instructions",
+         "", "## Sources", ""]
+for i, r in enumerate(results, 1):
+    lines.append(f"{i}. [{r.get('title') or r['url']}]({r['url']})" + (f" ({r['date'][:10]})" if r.get("date") else ""))
+lines.append("")
+ok = 0
+for i, r in enumerate(results, 1):
+    print(f"reading [{i}/{len(results)}] {r['url']}", file=sys.stderr)
+    snap, err = navigate(r["url"])
+    lines += [f"## [{i}] {r.get('title') or r['url']}", "", f"<{r['url']}>", ""]
+    if r.get("snippet"):
+        lines += [f"> search snippet: {r['snippet']}", ""]
+    if err:
+        lines += [f"_could not read: {err}_", ""]
+        continue
+    ok += 1
+    # keep every non-empty line: agent-browser and aria snapshot formats differ
+    text = "\n".join(l.rstrip() for l in snap.splitlines() if l.strip())
+    lines += ["```text", text[:6000].replace("```", "'''") + ("\n… (truncated)" if len(text) > 6000 else ""), "```", ""]
+slug = re.sub(r"[^a-z0-9]+", "-", q.lower()).strip("-")[:60] or "research"
+path = os.path.join(out_dir, f"{now:%Y%m%d-%H%M%S}-{slug}.md")
+with open(path, "w", encoding="utf-8") as fh:
+    fh.write("\n".join(lines))
+print(f"read {ok}/{len(results)} sources -> {path}")
+PY
+}
+
+# verify [--publish]: prove AgentZ's key possession (AgentZ's own identity.py check + live did.json
+# + fresh sign/verify challenge). --publish signs an operator-binding proof (EdDSA JWS, freshness =
+# current main commit) and publishes it as a public gist from the logged-in gh account, then
+# re-verifies the published copy with the standalone verifier. Never prints key material.
+SKILL_DIR="${AGENTZ_SKILL_DIR:-$(dirname "$(readlink -f "$0")")}"
+verify_possession() {
+  local publish=false; [ "${1:-}" = --publish ] && publish=true
+  local repo="${AGENTZ_REPO:-$HOME/projects/authichain-unified}" op
+  git -C "$repo" fetch -q origin main || die "git fetch failed in $repo"
+  local roster did_doc sha date
+  roster=$(git -C "$repo" show origin/main:workers/authichain-com/src/bot-identities.ts) || die "roster not on main"
+  did_doc=$(curl -fsS -m 20 https://authichain.com/agents/agentz/did.json) || die "cannot fetch live did.json"
+  sha=$(git -C "$repo" rev-parse origin/main); date=$(git -C "$repo" show -s --format=%cI origin/main)
+  op=$(gh api user --jq .login 2>/dev/null || echo undone0603)
+  local res rc
+  res=$(docker exec -i -e ROSTER_SRC="$roster" -e DID_DOC="$did_doc" -e MODE="$($publish && echo sign || echo check)" \
+        -e MAIN_SHA="$sha" -e MAIN_DATE="$date" -e OPERATOR_GITHUB="$op" -e OPERATOR_DOMAIN=authichain.com \
+        $C python3 - < "$SKILL_DIR/possession.py"); rc=$?
+  AGENTZ_JSON="$res" python3 - <<'PY'
+import json, os
+d = json.loads(os.environ["AGENTZ_JSON"])
+rows = [("agent", d.get("agent_id")), ("published did:key (main)", d.get("roster_did_key")),
+        ("AgentZ possession check", f'{d["agentz_possession_check"]["status"]} - {d["agentz_possession_check"]["reason"]}'),
+        ("key file derives", d.get("derived_did_key")), ("matches roster", d.get("matches_roster")),
+        ("matches live did.json", d.get("matches_live_did_json")), ("fresh challenge", d.get("challenge")),
+        ("trusted issuer", d.get("trusted_issuer")), ("RESULT", "VERIFIED" if d.get("verified") else "NOT VERIFIED")]
+for k, v in rows:
+    print(f"{k:<26}: {v}")
+PY
+  [ $rc = 0 ] || return 1
+  $publish || return 0
+
+  local dir="${AGENTZ_PROOF_DIR:-$HOME/.local/share/agentz/proofs}" ts; mkdir -p "$dir"; ts=$(date -u +%Y%m%dT%H%M%SZ)
+  local tmp; tmp=$(mktemp -d)
+  AGENTZ_JSON="$res" python3 - "$tmp" <<'PY'
+import json, os, sys
+d = json.loads(os.environ["AGENTZ_JSON"]); p = d["proof"]; t = sys.argv[1]
+open(f"{t}/agentz-possession.jws", "w").write(p["jws"] + "\n")
+open(f"{t}/agentz-possession.payload.json", "w").write(json.dumps(p["payload"], indent=2) + "\n")
+pl = p["payload"]
+open(f"{t}/README.md", "w").write(f"""# AgentZ operator key-possession proof
+
+**{pl['statement']}**
+
+- Agent: `{pl['agent_id']}` / `{pl['did']}`
+- Key: `{pl['did_key']}` (published at {pl['did_document']} and https://authichain.com/agents/agentz)
+- Signed: {pl['issued_at']}, after `{pl['freshness']['repo']}@{pl['freshness']['main_commit'][:12]}` ({pl['freshness']['main_commit_date']})
+- Published by GitHub account **{pl['operator']['github']}** (this gist's owner)
+
+`agentz-possession.jws` is a compact EdDSA JWS (`kid` = `did:web:authichain.com:agents:agentz#key-1`);
+`agentz-possession.payload.json` is its decoded payload.
+
+## Verify it yourself
+
+```
+pip install cryptography
+python3 verify_proof.py <raw URL of agentz-possession.jws> --gist <this gist URL>
+```
+
+It checks the signature against the live did.json key, that the payload names that key, that the
+freshness commit exists and predates the signature, and that this gist is owned by the named operator.
+
+**Limits:** {pl['limits']}
+""")
+PY
+  cp "$SKILL_DIR/verify_proof.py" "$tmp/verify_proof.py"
+  cp "$tmp/agentz-possession.jws" "$dir/$ts.jws"; cp "$tmp/agentz-possession.payload.json" "$dir/$ts.json"
+  local url; url=$(gh gist create --public -d "AgentZ (agent:authichain:agentz) operator key-possession proof $ts" \
+      "$tmp/README.md" "$tmp/agentz-possession.jws" "$tmp/agentz-possession.payload.json" "$tmp/verify_proof.py" | tail -1) \
+      || { rm -rf "$tmp"; die "gist publish failed (proof saved in $dir/$ts.jws)"; }
+  rm -rf "$tmp"
+  echo "published: $url"; echo "$url" > "$dir/$ts.gist"
+  local raw; raw=$(gh api "gists/${url##*/}" --jq '.files["agentz-possession.jws"].raw_url')
+  echo "--- independent re-verification of the published copy:"
+  python3 "$SKILL_DIR/verify_proof.py" "$raw" --gist "$url" | grep -E '^(PASS|FAIL|RESULT)'
+}
+
+cmd="${1:-status}"; shift || true
+# Shorthand: `z example.com` / `z https://…` browses; `z "a question with spaces"` researches.
+if [[ "$cmd" =~ ^https?:// || "$cmd" =~ ^[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/.*)?$ ]]; then
+  set -- "$cmd" "$@"; cmd=browse
+elif [[ "$cmd" == *" "* ]]; then
+  set -- "$cmd" "$@"; cmd=research
+fi
+case "$cmd" in
+  help|-h|--help) usage ;;
+
+  status|s)
+    printf 'container  : %s\n' "$(docker inspect -f '{{.State.Status}} (up since {{.State.StartedAt}})' $C 2>/dev/null || echo missing)"
+    printf 'health     : %s\n' "$(curl -sS -m 5 "$API/health" 2>&1)"
+    id=$(curl -sS -m 5 -w $'\n%{http_code}' "$API/identity" 2>/dev/null)
+    if [ "${id##*$'\n'}" = 200 ]; then
+      printf 'identity   : %s\n' "$(python3 -c 'import sys,json;d=json.load(sys.stdin);print(" ".join(f"{k}={d[k]}" for k in ("agent_id","possession") if k in d) or "ok")' <<<"${id%$'\n'*}")"
+    else
+      printf 'identity   : unavailable (HTTP %s from /identity)\n' "${id##*$'\n'}"
+    fi
+    if curl -fsS -m 3 http://127.0.0.1:9222/json/version >/dev/null 2>&1; then
+      printf 'browser    : isolated host up (%s)\n' "$(curl -sS -m 3 http://127.0.0.1:9222/json/version | python3 -c 'import sys,json;print(json.load(sys.stdin)["Browser"])')"
+    else
+      printf 'browser    : isolated host DOWN (agentz browser up)\n'
+    fi
+    wf=$(call GET /workflows 2>/dev/null) && printf 'workflows  : %s\n' "$(python3 -c 'import sys,json;print(len(json.load(sys.stdin)["workflows"]))' <<<"$wf")"
+    ;;
+
+  browse|navigate|b)
+    url="${1:-}"; [ -n "$url" ] || die "usage: agentz browse <https-url>"
+    [[ "$url" == http*://* ]] || url="https://$url"
+    body=$(python3 -c 'import json,sys;print(json.dumps({"url":sys.argv[1]}))' "$url")
+    res=$(call POST /agentz/browser/navigate "$body") || exit 1
+    if [ "${AGENTZ_RAW:-}" = 1 ]; then printf '%s\n' "$res"
+    else python3 -c 'import sys,json;d=json.load(sys.stdin);print("# "+d["url"]+"  (untrusted page content)\n");print(d["snapshot"])' <<<"$res"; fi
+    ;;
+
+  workflows|wf|list|w)
+    res=$(call GET /workflows) || exit 1
+    AGENTZ_JSON="$res" python3 - "${1:-}" <<'PY'
+import json, os, sys
+f = sys.argv[1].lower()
+for w in sorted(json.loads(os.environ["AGENTZ_JSON"])["workflows"], key=lambda w: w["id"]):
+    if f in (w["id"] + " " + (w.get("title") or "")).lower():
+        print(f'{w["id"]:<40} {w.get("priority") or "":<4} {w.get("title") or ""}')
+PY
+    ;;
+
+  run)
+    id="${1:-}"; [ -n "$id" ] || die "usage: agentz run <workflow-id> [--live] [k=v ...]"; shift
+    live=false; kvs=()
+    for a in "$@"; do [ "$a" = --live ] && live=true || kvs+=("$a"); done
+    payload=$(kv_json "${kvs[@]}") || exit 1
+    if $live; then
+      [ -t 0 ] || die "--live needs an interactive terminal to confirm"
+      read -r -p "Run '$id' LIVE (may send/post/write for real)? type the workflow id to confirm: " ok
+      [ "$ok" = "$id" ] || die "not confirmed"
+      q="mode=confirm&live=true"
+    else
+      q="mode=dry-run"
+    fi
+    res=$(call POST "/workflows/$id/run?$q" "$payload") || exit 1
+    [ "${AGENTZ_RAW:-}" = 1 ] && printf '%s\n' "$res" || pretty <<<"$res"
+    ;;
+
+  results)  call GET /results          | pretty ;;
+  agents)   call GET /agents           | pretty ;;
+  launch)   call GET /launch/state     | pretty ;;
+  score)    call GET /launch/score     | pretty ;;
+  control)  call GET /control-plane/state | pretty ;;
+  identity) curl -sS -m 10 "$API/identity" | pretty ;;
+
+  api)
+    [ $# -ge 2 ] || die "usage: agentz api <METHOD> <path> [json]"
+    call "$1" "$2" "${3:-}" ;;
+
+  cli)
+    agentz_cli "$@" ;;
+
+  research|r)
+    research "$@" ;;
+
+  verify|v)
+    verify_possession "$@" ;;
+
+  browser)
+    exec "$HOME/bin/agentz-browser-stack" "${1:-status}" ;;
+
+  up)
+    docker start $C >/dev/null && echo "started $C"; "$HOME/bin/agentz-browser-stack" ensure ;;
+  logs)
+    docker logs --tail "${1:-50}" -f $C ;;
+
+  *)
+    # Unknown word followed by more words = a question (quotes are often lost through wsl.exe).
+    if [ $# -gt 0 ]; then research "$cmd" "$@"
+    else echo "agentz: unknown command '$cmd'" >&2; usage >&2; exit 2; fi ;;
+esac

@@ -5,7 +5,7 @@ on:
     paths:
       - "agentz/**"
       - "workers/authichain-automation/**"
-      - "tests/test_agentz_*"
+      - "pyproject.toml"
       - ".github/workflows/agentz-mcp-verify.yml"
   workflow_dispatch:
 
@@ -43,11 +43,11 @@ jobs:
           .venv/bin/pip install --disable-pip-version-check 'mcp>=1,<2' pytest
       - name: Run AgentZ focused tests
         run: |
-          .venv/bin/python -m unittest discover -s tests -p 'test_agentz_capability_policy.py'
-          .venv/bin/python -m unittest discover -s tests -p 'test_agentz_browser_executor.py'
-          .venv/bin/python -m unittest discover -s tests -p 'test_agentz_navigation_dispatch.py'
-          .venv/bin/python -m unittest discover -s tests -p 'test_agentz_code_proposals.py'
-          .venv/bin/python -m unittest discover -s tests -p 'test_agentz_mcp_readiness.py'
+          .venv/bin/python -m pytest -q agentz/tests/test_agentz_capability_policy.py
+          .venv/bin/python -m pytest -q agentz/tests/test_agentz_browser_executor.py
+          .venv/bin/python -m pytest -q agentz/tests/test_agentz_navigation_dispatch.py
+          .venv/bin/python -m pytest -q agentz/tests/test_agentz_code_proposals.py
+          .venv/bin/python -m pytest -q agentz/tests/test_agentz_mcp_readiness.py
           .venv/bin/python -m pytest -q agentz/tests/test_ping_claw_agentz.py
       - name: AgentZ edge and scheduler Node integration tests
         run: |

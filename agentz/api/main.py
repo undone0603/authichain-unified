@@ -492,6 +492,24 @@ async def api_agentz_public_navigate(data: PublicNavigateInput):
         raise HTTPException(status_code=503, detail=str(exc))
 
 
+class ResearchInput(BaseModel):
+    question: str
+    n: int = 3
+
+
+@app.post("/agentz/research", dependencies=[Depends(verify_token)], tags=["AgentZ Browser"])
+async def api_agentz_research(data: ResearchInput):
+    """Read-only research: TinyFish search, then the top 1-5 results read through
+    the network-isolated browser. Returns cited sources; page text is untrusted."""
+    from agentz.core.web_research import research
+    try:
+        return await run_in_threadpool(research, data.question, data.n)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)[:300])
+
+
 class ProtectedDispatchInput(BaseModel):
     expected_sha: str
 

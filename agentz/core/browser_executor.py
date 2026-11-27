@@ -26,10 +26,26 @@ BROWSER_ENV_KEYS = frozenset({
 })
 _BROWSER_ENV_KEYS = BROWSER_ENV_KEYS
 
+# Where the browser runs: the fail-closed AGENTZ_BROWSER_BIN wrapper
+# (agentz/runtime/agentz-browser) picks the local isolated CDP host or a cloud
+# browser provider from these. They are browser-provider settings only; no other
+# credentials are passed through.
+_BROWSER_CONNECTION_KEYS = frozenset({
+    "AGENTZ_BROWSER_CDP_URL",
+    "BROWSERBASE_API_KEY", "BROWSERBASE_PROJECT_ID",
+    "BROWSER_USE_API_KEY",
+})
+
 
 def browser_subprocess_env(extra: dict[str, str] | None = None) -> dict[str, str]:
-    """Minimal env for a browser CLI. Service keys and operator tokens stay out."""
-    env = {key: value for key, value in os.environ.items() if key in BROWSER_ENV_KEYS}
+    """Minimal env for a browser CLI: runtime keys plus browser-provider settings.
+
+    Service keys and operator tokens stay out.
+    """
+    env = {
+        key: value for key, value in os.environ.items()
+        if key in BROWSER_ENV_KEYS or key in _BROWSER_CONNECTION_KEYS
+    }
     if extra:
         env.update(extra)
     return env
