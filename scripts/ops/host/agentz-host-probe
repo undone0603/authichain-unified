@@ -1,0 +1,73 @@
+#!/bin/bash
+# Restricted root entry point for the protected AgentZ host comparison workflow.
+# Installed root-owned at /usr/local/sbin/agentz-host-probe by
+# install-agentz-host-probe.sh; the runner user may sudo this file and nothing else.
+# It only runs the root-owned, hash-pinned probe copy with fixed arguments.
+#
+# Exit codes: 0/1 come from the probe (match / HOLD); 2 = usage or input
+# rejected; 3 = installation not trustworthy.
+set -euo pipefail
+umask 077
+
+PROBE=/usr/local/libexec/agentz/agentz_live_executable_probe.py
+# Substituted by the installer.
+PROBE_SHA256='@PROBE_SHA256@'
+WRAPPER_SOURCE_SHA256='@WRAPPER_SOURCE_SHA256@'
+RUNNER_HOME='@RUNNER_HOME@'
+
+die() { printf 'agentz-host-probe: %s\n' "$1" >&2; exit "${2:-2}"; }
+
+[ "$(id -u)" = 0 ] || die 'must run via sudo'
+[[ "$PROBE_SHA256" =~ ^[0-9a-f]{64}$ && "$WRAPPER_SOURCE_SHA256" =~ ^[0-9a-f]{64}$ && "$RUNNER_HOME" == /home/* ]] ||
+  die 'wrapper not installed by install-agentz-host-probe.sh' 3
+[ -f "$PROBE" ] && [ ! -L "$PROBE" ] || die 'installed probe missing' 3
+[ "$(stat -c '%u:%g' "$PROBE")" = 0:0 ] || die 'installed probe not root-owned' 3
+actual="$(sha256sum "$PROBE" | cut -d ' ' -f 1)"
+[ "$actual" = "$PROBE_SHA256" ] || die "HOLD: installed probe hash $actual is not pinned $PROBE_SHA256" 3
+TEMP_ROOT_RE="^${RUNNER_HOME}/actions-runner[A-Za-z0-9_-]*/_work/_temp/agentz-host-identity\\.[A-Za-z0-9]{8}\$"
+
+# No system/global git config: the probe runs git in the AgentZ process cwd,
+# and git's default safe.directory check then refuses any non-root-owned repo.
+run_probe() {
+  /usr/bin/env -i PATH=/usr/bin:/bin GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+    /usr/bin/python3 -B -I "$PROBE" --port 8000 "$@"
+}
+
+# Inputs live in a runner-owned directory, so they could be swapped after a
+# check. Copy them without following links into a root-only directory first,
+# then validate only the copies.
+stage_input() {
+  local path=$1 name=$2 dest=$3
+  [ "$(basename -- "$path")" = "$name" ] || die "unexpected input name: $path"
+  [[ "$(dirname -- "$path")" =~ $TEMP_ROOT_RE ]] || die "input outside runner temp: $path"
+  cp -R --no-preserve=all -- "$path" "$dest/$name" || die "cannot stage input: $path"
+  [ -f "$dest/$name" ] && [ ! -L "$dest/$name" ] || die "input must be a regular file: $path"
+}
+
+case "${1:-}" in
+  --self-check)
+    [ $# -eq 1 ] || die 'usage: --self-check'
+    printf 'PROBE_UID=%s\nINSTALLED_PROBE_SHA256=%s\nINSTALLED_WRAPPER_SOURCE_SHA256=%s\n' \
+      "$(id -u)" "$actual" "$WRAPPER_SOURCE_SHA256"
+    ;;
+  --baseline)
+    [ $# -eq 1 ] || die 'usage: --baseline'
+    rc=0; run_probe || rc=$?; exit "$rc"
+    ;;
+  --compare)
+    [ $# -eq 4 ] || die 'usage: --compare ARCHIVE RELEASE_JSON RECEIPT_SHA256'
+    [ "$(dirname -- "$2")" = "$(dirname -- "$3")" ] || die 'archive and release.json must share a directory'
+    [[ "$4" =~ ^[0-9a-f]{64}$ ]] || die 'receipt must be a sha256 hex digest'
+    stage="$(mktemp -d /var/tmp/agentz-host-probe.XXXXXXXX)"
+    trap 'rm -rf -- "$stage"' EXIT
+    stage_input "$2" agentz-linux-arm64.tar.gz "$stage"
+    stage_input "$3" release.json "$stage"
+    rc=0
+    run_probe --archive "$stage/agentz-linux-arm64.tar.gz" --release-json "$stage/release.json" \
+      --github-receipt-sha256 "$4" || rc=$?
+    exit "$rc"
+    ;;
+  *)
+    die 'usage: --self-check | --baseline | --compare ARCHIVE RELEASE_JSON RECEIPT_SHA256'
+    ;;
+esac

@@ -31,9 +31,26 @@ jobs:
           test "$(hostname)" = LAPTOP-72MAGTL2
           test "$(uname -m)" = aarch64
           test -x /usr/bin/sudo
-          sudo -n id -u | grep -qx '0'
           python3 -B -c 'import ast,sys; ast.parse(open(sys.argv[1]).read())' scripts/ops/agentz_live_executable_probe.py
-          echo 'PROBE_SOURCE_SHA256='"$(sha256sum scripts/ops/agentz_live_executable_probe.py | cut -d ' ' -f 1)"
+          probe_sha="$(sha256sum scripts/ops/agentz_live_executable_probe.py | cut -d ' ' -f 1)"
+          echo "PROBE_SOURCE_SHA256=$probe_sha"
+          # Restricted authority only: the runner may sudo the owner-installed wrapper,
+          # which runs a root-owned probe copy pinned to this protected-main blob.
+          wrapper_sha="$(sha256sum scripts/ops/host/agentz-host-probe | cut -d ' ' -f 1)"
+          install_hint='owner runs: sudo scripts/ops/host/install-agentz-host-probe.sh from a protected-main worktree'
+          self_check="$(sudo -n /usr/local/sbin/agentz-host-probe --self-check)" ||
+            { echo "HOLD: restricted probe authority not installed or not usable; $install_hint"; exit 1; }
+          echo "$self_check"
+          grep -qx 'PROBE_UID=0' <<< "$self_check"
+          grep -qx "INSTALLED_PROBE_SHA256=$probe_sha" <<< "$self_check" &&
+            grep -qx "INSTALLED_WRAPPER_SOURCE_SHA256=$wrapper_sha" <<< "$self_check" ||
+            { echo "HOLD: installed probe or wrapper differs from protected main; $install_hint"; exit 1; }
+          # The wrapper must be the runner's only passwordless root path.
+          broader="$(sudo -n -l | grep NOPASSWD | grep -v -F /usr/local/sbin/agentz-host-probe || true)"
+          test -z "$broader" || { echo 'HOLD: runner has other NOPASSWD sudo grants'; echo "$broader"; exit 1; }
+          if id -nG | tr ' ' '\n' | grep -qx docker; then
+            echo 'RUNNER_ROOT_EQUIVALENT_GROUP=docker; restricted sudo does not bound this runner'
+          fi
       - name: Hash existing runner isolation marker (no content disclosure)
         shell: bash
         run: |
@@ -51,12 +68,15 @@ jobs:
           # This first probe intentionally returns HOLD when no protected image receipt
           # is provided. Keep its output so process identity is observable even when
           # the following release download is unavailable.
-          if sudo -n env -i PATH=/usr/bin:/bin /usr/bin/python3 -B scripts/ops/agentz_live_executable_probe.py --port 8000; then
-            echo 'Unexpected evidence-only probe success without archive inputs'
-            exit 1
-          else
-            echo 'BASELINE=UNATTESTED_READ_ONLY_OBSERVATION'
-          fi
+          rc=0
+          out="$(sudo -n /usr/local/sbin/agentz-host-probe --baseline)" || rc=$?
+          echo "$out"
+          # Only the probe's own HOLD (exit 1 with its report line) is the expected
+          # baseline; wrapper or sudo failures (2, 3, other) must fail the job.
+          test "$rc" -eq 1 || { echo "Unexpected baseline exit $rc"; exit 1; }
+          grep -q '^AGENTZ_HOST_EXECUTABLE_PROBE=.*"result": "HOLD"' <<< "$out" ||
+            { echo 'Baseline produced no probe HOLD report'; exit 1; }
+          echo 'BASELINE=UNATTESTED_READ_ONLY_OBSERVATION'
       - name: Download pinned protected draft release and compare live image
         env:
           GH_TOKEN: ${{ github.token }}
@@ -91,8 +111,5 @@ jobs:
             .source_sha == $sha and .sha256 == $a
           ' "$tmp/release.json" >/dev/null
           # Drop GitHub token and any other credentials before root-only host probe.
-          sudo -n env -i PATH=/usr/bin:/bin /usr/bin/python3 -B \
-            scripts/ops/agentz_live_executable_probe.py --port 8000 \
-            --archive "$tmp/agentz-linux-arm64.tar.gz" \
-            --release-json "$tmp/release.json" \
-            --github-receipt-sha256 "$pinned_receipt_sha"
+          sudo -n /usr/local/sbin/agentz-host-probe --compare \
+            "$tmp/agentz-linux-arm64.tar.gz" "$tmp/release.json" "$pinned_receipt_sha"
