@@ -2,6 +2,9 @@
  * Stale QRON per-scan / per-read / per-QR prices are not live (those
  * routes 404). This guard keeps that copy from coming back.
  *
+ * It also bans retired pack-credit expiry claims ("never expire",
+ * "credits don't expire") on user-facing page sources.
+ *
  * Live agent pay is unchanged: POST /api/x402, $0.05 USDC on Base,
  * paid agent verification. Do not describe that rail as a human QR
  * scan meter.
@@ -23,6 +26,10 @@ export const DOLLAR_PER_QR = /\$\d+(?:\.\d+)?\s*\/\s*QRs?\b/i;
 /** `$0.001-$0.01` including the HTML split on the old QRON pricing card. */
 export const MICROPRICE_RANGE = /\$0\.001(?:<[^>]+>)?\s*[-–]\s*\$?0\.0?1\b/;
 export const PER_SEAL_FEE = /Per-Seal Fee/i;
+/** Retired pack-credit expiry slogans. Not JWT / certificate / session expiry. */
+export const NEVER_EXPIRE = /never[- ]expir(?:e|es|ing)\b/i;
+export const DONT_EXPIRE =
+  /\b(?:don['’]?t|do not|won['’]?t|will not)\s+expire\b/i;
 
 const PRICING_CONTEXT =
   /\$(?!QRON\b)|\bfees?\b|\bcosts?\b|\bcharg(?:e|ed|es|ing)\b|\bpric(?:e|es|ing)\b|\bmeter(?:ing)?\b|\brevenue\b|\bcents?\b|\bbilled\b|\bbilling\b/i;
@@ -113,6 +120,47 @@ export function lineHits(line: string): string[] {
 /** A line fails the guard when it hits a banned pattern and is not allowlisted. */
 export function failsGuard(rel: string, line: string): boolean {
   return lineHits(line).length > 0 && !isAllowlisted(rel, line);
+}
+
+export function neverExpireHits(line: string): string[] {
+  const hits: string[] = [];
+  if (NEVER_EXPIRE.test(line)) hits.push("never-expire");
+  if (DONT_EXPIRE.test(line)) hits.push("dont-expire");
+  return hits;
+}
+
+/**
+ * Pages and catalogues that ship /generate, home, and /pricing HTML + JSON-LD.
+ */
+const USER_FACING_PREFIXES = [
+  "src/app/",
+  "apps/qron-platform/src/app/",
+  "worker-app/",
+  "workers/qron-space/src/",
+  "workers/authichain-com/src/", // pragma: allowlist secret
+  "workers/authichain-api-gateway/src/", // pragma: allowlist secret
+];
+const USER_FACING_FILES = new Set([
+  "src/lib/plans.ts",
+  "src/lib/checkout-gate.ts",
+  "src/lib/generate-api.ts",
+  "apps/qron-platform/src/lib/plans.ts",
+  "workers/_shared/estate-pricing.ts",
+]);
+
+export function isUserFacingCopyPath(rel: string): boolean {
+  const norm = rel.split(path.sep).join("/");
+  if (USER_FACING_FILES.has(norm)) return true;
+  return USER_FACING_PREFIXES.some(prefix => norm.startsWith(prefix));
+}
+
+export function failsNeverExpireGuard(rel: string, line: string): boolean {
+  if (!isUserFacingCopyPath(rel)) return false;
+  const norm = rel.split(path.sep).join("/");
+  if (norm.endsWith("scripts/__tests__/qron-perscan-copy-guard.test.ts")) {
+    return false;
+  }
+  return neverExpireHits(line).length > 0;
 }
 
 function walkCopyFiles(dir: string, acc: string[] = []): string[] {
@@ -252,5 +300,69 @@ describe("qron per-scan / per-read / per-QR copy guard", () => {
       "utf8"
     );
     expect(thread).toMatch(/No per-scan fees/);
+  });
+});
+
+describe("retired never-expire pack-credit copy guard", () => {
+  it("flags the live Nov 25 generate and pricing sentences", () => {
+    const generate =
+      "Then Starter Pack: 100 generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire. A scannable QR is not an authenticity proof.";
+    expect(neverExpireHits(generate)).toContain("never-expire");
+    expect(failsNeverExpireGuard("worker-app/dynamic-pages.ts", generate)).toBe(
+      true
+    );
+
+    const offer =
+      "100 AI QR generations for $29, paid once. No subscription. One-time pack credits (Starter and Creator) never expire.";
+    expect(neverExpireHits(offer)).toContain("never-expire");
+    expect(failsNeverExpireGuard("src/lib/plans.ts", offer)).toBe(true);
+
+    expect(neverExpireHits("credits don't expire")).toContain("dont-expire");
+    expect(
+      neverExpireHits("Credits purchased in one-time packs do not expire.")
+    ).toContain("dont-expire");
+    expect(
+      failsNeverExpireGuard(
+        "src/app/terms/page.tsx",
+        "Credits purchased in one-time packs do not expire."
+      )
+    ).toBe(true);
+  });
+
+  it("does not treat the replacement or a FAQ question as a hit", () => {
+    expect(neverExpireHits("One-time pack. No subscription.")).toEqual([]);
+    expect(
+      neverExpireHits(
+        "Then Starter Pack: 100 generations for $29, paid once. No subscription. A scannable QR is not an authenticity proof."
+      )
+    ).toEqual([]);
+    expect(neverExpireHits("Do credits expire?")).toEqual([]);
+    expect(
+      failsNeverExpireGuard("src/app/_home/QronHome.tsx", "Do credits expire?")
+    ).toBe(false);
+  });
+
+  it("user-facing page sources have no never-expire or don't-expire claims", () => {
+    const files = walkCopyFiles(ROOT).filter(isUserFacingCopyPath);
+    expect(files).toEqual(
+      expect.arrayContaining([
+        "worker-app/dynamic-pages.ts",
+        "src/lib/plans.ts",
+        "workers/_shared/estate-pricing.ts",
+        "workers/qron-space/src/index.ts",
+        "src/app/terms/page.tsx",
+      ])
+    );
+    const violations: string[] = [];
+    for (const rel of files) {
+      const text = readFileSync(path.join(ROOT, rel), "utf8");
+      for (const [i, line] of text.split(/\r?\n/).entries()) {
+        const hits = neverExpireHits(line);
+        if (hits.length === 0) continue;
+        if (!failsNeverExpireGuard(rel, line)) continue;
+        violations.push(`${rel}:${i + 1} [${hits.join(",")}] ${line.trim()}`);
+      }
+    }
+    expect(violations).toEqual([]);
   });
 });
