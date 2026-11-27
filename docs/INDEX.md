@@ -115,6 +115,23 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - `agentz/` — Python workflow orchestrator. CLI: `python -m agentz.cli list` / `run <id> --mode dry-run`
 - Conventions: [../GEMINI.md](../GEMINI.md) · State: [strategy/SYSTEM_STATE.md](strategy/SYSTEM_STATE.md)
 
+## Governance & routing
+
+- [OPERATING_CHARTER.md](OPERATING_CHARTER.md) – operating charter and governance rules
+- [ROUTING.md](ROUTING.md) – routing rules and dispatch conventions
+- [UNIFIED_ARCHITECT_AGENT.md](UNIFIED_ARCHITECT_AGENT.md) – unified architect agent specification
+
+## Repository directory map
+
+- `apps/`, `packages/`, `libs/`, `shared/` – monorepo applications, shared packages, and libraries
+- `api/`, `server/`, `client/`, `src/` – core API, server, and frontend application code
+- `worker/`, `workers/`, `worker-app/` – Cloudflare Workers and background worker apps
+- `agentz/`, `mcp/` – AgentZ Python orchestrator and Model Context Protocol servers
+- `contracts/`, `protocol/`, `schemas/` – smart contracts, protocol definitions, and JSON/DB schemas
+- `supabase/`, `drizzle/` – database migrations, functions, and ORM definitions
+- `scripts/`, `ops/`, `automation/` – maintenance scripts, operations, and n8n workflows
+- `test/`, `tests/`, `fixtures/` – test suites and fixtures
+
 ---
 
 ### Notes
