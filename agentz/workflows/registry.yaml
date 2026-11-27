@@ -554,6 +554,10 @@ workflows:
     estimated_minutes: 20
     requires: [supabase_url, supabase_service_key, openai_api_key]
     prerequisites: [authichain_terminal_ops]
+    risk_class: high
+    reputational_impact: high
+    requires_human_approval: true
+    rollback_strategy: "Live Supabase metadata writes require owner-approved execution; CI remains dry-run."
     description: |
       Autonomous Regulatory Compliance:
       1) Researches current EU Digital Product Passport (DPP) mandates.
