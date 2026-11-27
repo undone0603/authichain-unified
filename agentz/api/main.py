@@ -492,6 +492,28 @@ async def api_agentz_public_navigate(data: PublicNavigateInput):
         raise HTTPException(status_code=503, detail=str(exc))
 
 
+class NotaryInput(BaseModel):
+    sha256: str
+
+
+@app.post("/agentz/notary", dependencies=[Depends(verify_token)], tags=["AgentZ Notary"])
+async def api_agentz_notary(data: NotaryInput):
+    """Operator stamp: sign a SHA-256 with AgentZ's key and anchor it via OpenTimestamps.
+
+    The public paid stamp is sold by the edge worker over Lightning (POST /api/notary,
+    docs/strategy/LIGHTNING_L402.md), which calls this endpoint with the operator token.
+    """
+    from agentz.core.notary import notarize
+    try:
+        return await run_in_threadpool(notarize, data.sha256)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except PermissionError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)[:300])
+
+
 class ResearchInput(BaseModel):
     question: str
     n: int = 3

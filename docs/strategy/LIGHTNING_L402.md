@@ -37,8 +37,13 @@ Everything is in the edge worker (`worker-app`). It serves `app.authichain.com` 
 | Service | Endpoint | Price |
 | --- | --- | --- |
 | Signals | `/api/x402?tier=ping\|verify\|evidence` | $0.01 / $0.05 / $0.10 |
+| Notary | `POST /api/notary {"sha256": "<64 hex>"}`: AgentZ signs the hash and anchors it in Bitcoin (OpenTimestamps) | $0.05 |
 
 `authichain.com/api/x402` is served by the `authichain-com` worker and stays x402-only.
+
+**Notary.** The worker takes the payment and asks AgentZ's operator endpoint (`/agentz/notary`) to sign.
+This needs `AGENTZ_API_URL`, `AGENT_SECRET` and the Cloudflare Access service token (`CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`)
+as Worker secrets. If AgentZ doesn't answer, the claim is released and the same token can be retried.
 
 ## When it turns on
 
