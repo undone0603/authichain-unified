@@ -44,8 +44,6 @@ EXPECTED_MONEY_PATHS = (
 
 
 def _ok_status(url: str) -> int:
-    if url.rstrip("/").endswith("/api/funnel"):
-        return 400
     if url.endswith("/api/checkout/dpp") or url.endswith(
         "/api/checkout/plan/strainchain_passport"
     ):
@@ -80,9 +78,8 @@ def test_auto_logs_status_codes(monkeypatch):
     monkeypatch.setattr(gte, "_probe", fake_probe)
     ctx = _Ctx(Mode.AUTO)
     result = gte.run(ctx)
-    assert "No unexpected 5xx" in result
+    assert "No unexpected status" in result
     assert any("-> 200" in s for s in ctx.steps)
-    assert any("-> 400" in s for s in ctx.steps)
     assert any("checkout/dpp" in s and "-> 303" in s for s in ctx.steps)
     assert any("strainchain_passport" in s and "-> 303" in s for s in ctx.steps)
 
@@ -180,7 +177,7 @@ def test_probe_targets_are_estate_plus_money_hooks():
     assert len(gte.ESTATE_APEXES) == 4
     paths = {url for _method, url in gte.API_PROBES}
     assert "https://authichain.com/api/x402/health" in paths
-    assert "https://authichain.com/api/funnel" in paths
+    assert all(method == "GET" for method, _url in gte.API_PROBES)
     money = set(gte.MONEY_PATHS)
     for url in EXPECTED_MONEY_PATHS:
         assert url in money
@@ -235,3 +232,19 @@ def test_probe_does_not_follow_checkout_redirect(monkeypatch):
         ("no-follow", gte.CHECKOUT_PASSPORT_URL),
         ("follow", "https://authichain.com/pricing"),
     ]
+
+
+def test_x402_health_non_200_raises(monkeypatch):
+    def fake_probe(method, url, timeout=12):
+        if url == "https://authichain.com/api/x402/health":
+            return 404
+        return _ok_status(url)
+
+    monkeypatch.setattr(gte, "_probe", fake_probe)
+    ctx = _Ctx(Mode.AUTO)
+    try:
+        gte.run(ctx)
+        raise AssertionError("expected UnexpectedServerError")
+    except gte.UnexpectedServerError as exc:
+        assert "/api/x402/health" in str(exc)
+        assert "404" in str(exc)
