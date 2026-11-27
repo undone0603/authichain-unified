@@ -1,0 +1,17 @@
+name = "license-checkout"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+workers_dev = false
+
+[vars]
+STRIPE_MODE = "live"
+CHECKOUT_ENABLED = "false"
+PUBLIC_ORIGIN = "https://license-checkout.undone-k.workers.dev"
+ALLOWED_ORIGINS = "https://authichain.com,https://www.authichain.com,https://strainchain.io,https://www.strainchain.io"
+
+# Bind LICENSE_FULFILLMENT only to a backend that meets README.md's contract.
+# No placeholder service is deployed or marked ready by this configuration.
+
+[observability]
+enabled = true
+head_sampling_rate = 1
