@@ -3,7 +3,7 @@ agentz.workflows.handlers.ghost_traffic_engine
 ----------------------------------------------
 Light health probes for the four estate apexes plus money/loop mounts.
 
-No paid APIs. No invented secrets. Safe GET / empty-JSON POST only.
+No paid APIs. No invented secrets. GET-only probes; no write requests.
 Unexpected 5xx (or transport failure) fails the run.
 GET /api/checkout/dpp must 302/303 — do not follow the Stripe redirect.
 """
@@ -155,11 +155,11 @@ def run(ctx: ExecutionContext) -> str:
 
     if failures:
         raise UnexpectedServerError(
-            "ghost-traffic unexpected 5xx, bad checkout status, or transport failure: "
+            "ghost-traffic unexpected status or transport failure: "
             + "; ".join(failures)
         )
 
     return (
         f"Ghost Traffic Engine probed {len(results)} targets at {now}. "
-        "No unexpected 5xx."
+        "No unexpected status."
     )
