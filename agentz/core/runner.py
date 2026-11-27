@@ -163,6 +163,32 @@ def execute(
     else:
         effective_mode = mode
 
+    # Full firewall on every direct execute() call, not only via the Governor (#2289):
+    # per-workflow budget and ProtocolGuardian veto block before any side effect.
+    if mode != Mode.DRY_RUN:
+        import os as _os
+        from agentz.core.risk_firewall import assess_workflow as _assess
+        assessment = _assess(
+            wf_id=wf.id,
+            risk_class=str(getattr(wf, "risk_class", "low")),
+            financial_limit_usd=float(getattr(wf, "financial_limit_usd", 0) or 0),
+            requires_human_approval=bool(getattr(wf, "requires_human_approval", False)),
+            current_mode=mode.value,
+            audit_log_path=audit_log_path,
+            protocol_veto_active=_os.getenv("AGENTZ_PROTOCOL_VETO", "").lower() in ("1", "true"),
+        )
+        if not assessment.approved:
+            return RunResult(
+                workflow_id=wf.id,
+                status="blocked",
+                started_at=started_iso,
+                finished_at=datetime.now(timezone.utc).isoformat(),
+                duration_s=time.time() - started,
+                notes=f"risk firewall: {assessment.reason}",
+            )
+        if assessment.escalated_mode == "confirm":
+            effective_mode = Mode.CONFIRM
+
     print(f"\n[{wf.priority.upper()}] {wf.id} : {wf.title}")
     print(f"   mode={effective_mode.value}  type={wf.type}  est={wf.estimated_minutes}min")
     if wf.description:
