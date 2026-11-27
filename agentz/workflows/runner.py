@@ -59,7 +59,7 @@ def resolve_registry_entry(handler: str, registry: Optional[dict] = None):
     def strictness(wf):
         limit = float(wf.financial_limit_usd or 0)
         return (
-            _RISK_ORDER.get(str(wf.risk_class), 0),
+            _RISK_ORDER.get(str(wf.risk_class), len(_RISK_ORDER)),
             bool(wf.requires_human_approval) or bool(wf.confirm_before_run),
             -limit if limit > 0 else float("-inf"),
         )
