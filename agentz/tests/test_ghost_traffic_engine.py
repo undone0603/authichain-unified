@@ -122,7 +122,7 @@ def test_checkout_303_is_success(monkeypatch):
     monkeypatch.setattr(gte, "_probe", fake_probe)
     ctx = _Ctx(Mode.AUTO)
     result = gte.run(ctx)
-    assert "No unexpected 5xx" in result
+    assert "No unexpected status" in result
 
 
 def test_checkout_302_is_success(monkeypatch):
@@ -134,7 +134,7 @@ def test_checkout_302_is_success(monkeypatch):
     monkeypatch.setattr(gte, "_probe", fake_probe)
     ctx = _Ctx(Mode.AUTO)
     result = gte.run(ctx)
-    assert "No unexpected 5xx" in result
+    assert "No unexpected status" in result
 
 
 def test_checkout_200_html_is_failure(monkeypatch):
@@ -248,3 +248,27 @@ def test_x402_health_non_200_raises(monkeypatch):
     except gte.UnexpectedServerError as exc:
         assert "/api/x402/health" in str(exc)
         assert "404" in str(exc)
+
+
+def test_x402_health_non_200_raises(monkeypatch):
+    def fake_probe(method, url, timeout=12):
+        if url == "https://authichain.com/api/x402/health":
+            return 404
+        return _ok_status(url)
+
+    monkeypatch.setattr(gte, "_probe", fake_probe)
+    ctx = _Ctx(Mode.AUTO)
+    try:
+        gte.run(ctx)
+        raise AssertionError("expected UnexpectedServerError")
+    except gte.UnexpectedServerError as exc:
+        assert "/api/x402/health" in str(exc)
+        assert "404" in str(exc)
+
+
+def test_probe_rejects_non_get_method():
+    try:
+        gte._probe("POST", "https://authichain.com/api/funnel")
+        raise AssertionError("expected ValueError")
+    except ValueError as exc:
+        assert "GET-only" in str(exc)
