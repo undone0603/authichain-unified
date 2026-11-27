@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 30
     # Manual runs (workflow_dispatch) are always allowed. Scheduled light
     # probes run only once GHOST_TRAFFIC_ENABLED is "true" — same kill-switch
-    # as autonomous-business-cycle.yml. Probes are safe GET/empty-JSON POST.
+    # as autonomous-business-cycle.yml. Probes are GET-only.
     if: ${{ github.event_name == 'workflow_dispatch' || vars.GHOST_TRAFFIC_ENABLED == 'true' }}
 
     steps:
@@ -44,12 +44,12 @@ jobs:
           # Dispatch defaults dry-run; live probes only when dry_run=false.
           if [ "${{ github.event_name }}" = "schedule" ]; then
             echo "mode=auto" >> "$GITHUB_OUTPUT"
-            echo "Scheduled run → live light probes"
+            echo "Scheduled run → live GET-only probes"
             exit 0
           fi
           if [ "${{ inputs.dry_run }}" = "false" ]; then
             echo "mode=auto" >> "$GITHUB_OUTPUT"
-            echo "Manual dispatch → live light probes"
+            echo "Manual dispatch → live GET-only probes"
             exit 0
           fi
           echo "mode=dry-run" >> "$GITHUB_OUTPUT"
