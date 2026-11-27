@@ -27,3 +27,8 @@ Restore `/founders` as an auth-gated deal command center (Today / Board / Ops).
 - AgentZ uses the service-role client. Actor is logged as `agentz`.
 - Command surface: `GET/POST /api/founders/agentz` ops `dashboard|cycle|digest|capture|import-sam|mutate|ask`.
 - `mutate action=send` still only marks the draft sent. It does not email the lead.
+
+## 2026-11-24 — live pipeline monitor
+
+- `GET /api/founders/monitor` is founders-session (or AgentZ) gated. It reads `automation_logs` through `access.supabase` and, when `GITHUB_MONITOR_TOKEN` is set, the latest run of eight existing GitHub workflow files.
+- DreamDash `/founders` polls that route every 30s while the tab is visible. Missing token omits Actions status; logs still refresh. The token is server-only.
