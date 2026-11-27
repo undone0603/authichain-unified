@@ -57,12 +57,20 @@ import {
   type SealLookupEnv,
 } from "../src/lib/paid-seal-verify";
 import { growthDiscovery, x402ListingPack } from "../src/lib/x402-growth";
-import { resolveTierRequest } from "../src/lib/x402-tiers";
+import { resolveTierRequest, type SignalTier } from "../src/lib/x402-tiers";
+import { isL402Authorization } from "../src/lib/l402";
+import {
+  l402SignalChallenge,
+  l402SignalsConfig,
+  resolveL402PaidSealVerify,
+  type L402Env,
+} from "../src/lib/l402-signals";
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
 type X402Bindings = X402HealthEnv &
-  SealLookupEnv & {
+  SealLookupEnv &
+  L402Env & {
     X402_PAY_TO?: string;
     NODE_ENV?: string;
     /** x402 replay guard (CFA-366). Unbound = paid path returns 503. */
@@ -207,7 +215,73 @@ async function unpaidOrPaidGet(c: QuoteCtx & {
   if (proofHeader && parsePaymentHeader(proofHeader)) {
     return agentVerify(c);
   }
+  if (isL402Authorization(c.req.header("Authorization"))) {
+    return agentVerify(c);
+  }
   return unpaidQuote(c);
+}
+
+/**
+ * WWW-Authenticate for an unpaid POST when L402 is on (l402-signals.ts).
+ * GET/HEAD quotes never mint invoices, so crawlers cannot fill a backend.
+ * Any L402 failure leaves the x402 quote exactly as it was.
+ */
+async function l402ChallengeHeaders(
+  env: X402Bindings | undefined,
+  url: string,
+  tier: SignalTier,
+  priceUsd: number
+): Promise<Record<string, string>> {
+  try {
+    const challenge = await l402SignalChallenge({
+      config: l402SignalsConfig(env),
+      url,
+      tier,
+      priceUsd,
+    });
+    return challenge ? { "WWW-Authenticate": challenge.header } : {};
+  } catch (err) {
+    console.warn(JSON.stringify({ evt: "l402_challenge_failed", error: String(err) }));
+    return {};
+  }
+}
+
+/** Paid signal call presented as `Authorization: L402 <macaroon>:<preimage>`. */
+async function l402Verify(
+  c: {
+    env?: X402Bindings;
+    req: { raw: Request };
+    json: (body: unknown, status?: number, headers?: Record<string, string>) => Response;
+  },
+  authorization: string,
+  resource: string,
+  tier: SignalTier,
+  priceUsd: number
+): Promise<Response> {
+  const config = l402SignalsConfig(c.env);
+  if (!config) {
+    return c.json({ error: "l402_not_enabled", rail: "lightning" }, 400, NO_STORE);
+  }
+  const decision = await resolveL402PaidSealVerify({
+    authorization,
+    config,
+    url: resource,
+    tier,
+    bodyText: await c.req.raw.text(),
+    env: c.env,
+  });
+  if (decision.action !== "answer") {
+    return c.json({ error: "l402_unexpected_decision" }, 500, NO_STORE);
+  }
+  const fresh =
+    decision.status === 402
+      ? await l402ChallengeHeaders(c.env, resource, tier, priceUsd)
+      : {};
+  return c.json(decision.body, decision.status, {
+    ...NO_STORE,
+    ...decision.headers,
+    ...fresh,
+  });
 }
 
 async function listing(c: {
@@ -312,7 +386,22 @@ async function agentVerify(c: {
   const tierReq = resolveTierRequest(resource, verifyUsd);
   if (!tierReq.ok) return c.json(tierReq.body, tierReq.status, NO_STORE);
   const priceUsd = tierReq.priceUsd;
+  const authorization = c.req.header("Authorization");
+  if (authorization && isL402Authorization(authorization)) {
+    return l402Verify(c, authorization, resource, tierReq.tier, priceUsd);
+  }
   if (!payTo) {
+    // x402 unconfigured: still offer Lightning when L402 is on.
+    const l402 = await l402ChallengeHeaders(c.env, resource, tierReq.tier, priceUsd);
+    if (l402["WWW-Authenticate"]) {
+      const refusal = await unpaidSealRefusal(c.req.raw);
+      if (refusal) return c.json(refusal.body, refusal.status, NO_STORE);
+      return c.json(
+        { error: "payment_required", rails: ["lightning"], tier: tierReq.tier },
+        402,
+        { ...NO_STORE, ...l402 }
+      );
+    }
     return c.json(
       {
         error: "payments_not_configured",
@@ -335,7 +424,8 @@ async function agentVerify(c: {
   if (!proof || !proofHeader) {
     const refusal = await unpaidSealRefusal(c.req.raw);
     if (refusal) return c.json(refusal.body, refusal.status, NO_STORE);
-    return c.json(required.v2, 402, { ...NO_STORE, ...required.headers });
+    const l402 = await l402ChallengeHeaders(c.env, resource, tierReq.tier, priceUsd);
+    return c.json(required.v2, 402, { ...NO_STORE, ...required.headers, ...l402 });
   }
 
   const verifyApp = verifyAppBinding(c.env);

@@ -10,15 +10,16 @@ Economics of the **live agent rail** stay in [`AGENT_TOKENOMICS_x402.md`](./AGEN
 
 ---
 
-## 1. Three money rails (do not mix)
+## 1. Money rails (do not mix)
 
 | Rail | Buyer | Asset / SKU | Chain or processor | Recipient | Source of truth |
 | --- | --- | --- | --- | --- | --- |
 | **Stripe** (human checkout) | Person with a card | Passport **$49** · DPP **$299** · QRON packs / credits | Stripe acct `acct_1SXIyEGqTruSqV8T` | Stripe, not these wallets | `src/lib/plans.ts` |
 | **x402** (agent pay) | Funded agent wallet | Circle **USDC**, **$0.05 / call** | **Base 8453** | payTo / tokenomics EOA `0x5db5…6AA2` | `src/lib/x402.ts` + live health |
+| **L402** (agent pay, Lightning) — **built, off** | Agent with a Lightning wallet | Same USD prices as x402, converted to **sats** per call | **Bitcoin Lightning** | Lightning backend (not chosen yet); the owner sweeps it to Cash App | [`LIGHTNING_L402.md`](./LIGHTNING_L402.md) + `src/lib/l402.ts` |
 | **$QRON** (ERC-20) | n/a — **not a payment rail** | 1,000,000,000 supply, 18 decimals | **Polygon 137** | Contract `0xAebf…E437`; held almost entirely by `0x5db5…6AA2` | This file + `contracts/README.md` |
 
-A passport or DPP purchase does **not** credit x402 calls. An x402 payment does **not** publish a genetics passport. `$QRON` does **not** settle agent pay. Live operator decision (2026-08-07, still in force): **USDC only** on the paid agent path.
+A passport or DPP purchase does **not** credit x402 calls. An x402 payment does **not** publish a genetics passport. `$QRON` does **not** settle agent pay. Live operator decision (2026-08-07, still in force): **USDC only** on the paid agent path. Owner decision (2026-11-26): add Lightning (L402) **beside** x402 on the notary, the signal tiers and Dex. It is built and off: until the owner picks a Lightning backend, the live paid agent path is still USDC only. A Lightning payment never credits an x402 call, and an x402 payment never redeems an L402 token.
 
 ---
 
@@ -94,7 +95,7 @@ Use this tx when someone asks “which wallet is ops?” — it shows Smart Wall
 1. Use these names: **`0x5db5…6AA2` = payTo / tokenomics EOA** (live `X402_PAY_TO`, also `$QRON` holder); **`0xAebf…E437` = `$QRON` ERC-20 contract** (never a wallet or payTo); **`0xbad4…` = NFT deployer**.
 2. Live Base USDC (`X402_PAY_TO`) lands on `0x5db5…6AA2`. Never put `0xAebf…E437` on catalog/health.
 3. Coinbase Smart Wallet ≠ any EOA. Do not put its key in `WALLET_PRIVATE_KEY` (there isn’t one for `ethers.Wallet`).
-4. `$QRON` ≠ x402. Live agent pay is **Base USDC $0.05 only**.
+4. `$QRON` ≠ x402. Live agent pay is **Base USDC $0.05 only** until the Lightning backend is live. L402 (Lightning) is a separate rail with its own replay keys (`l402:ph:`), never mixed with x402 settlement or its spend ledger.
 5. Stripe (Passport $49 / DPP $299 / QRON packs) is a **third** money path and does not use these wallets.
 6. Pimlico bundler / EntryPoint are **infrastructure**, not owner wallets.
 7. govchain.us staking UI is **theater**, not circulating supply.
