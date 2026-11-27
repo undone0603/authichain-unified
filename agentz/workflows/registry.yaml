@@ -20,6 +20,29 @@
 
 workflows:
 
+  # Optional commercial discovery validation; strictly non-production.
+  # This is a synthetic unit-test gate, NOT authorized customer outreach,
+  # payment processing, physical inspection or aircraft/spacecraft acceptance.
+  - id: aerospace_preacceptance_pilot
+    title: "Aerospace EEE component provenance screening — isolated prototype"
+    priority: low
+    blocks_revenue: false
+    handler: handlers.aerospace_preacceptance
+    type: shell
+    estimated_minutes: 1
+    requires: []
+    prerequisites: []
+    confirm_before_run: true
+    max_runs_per_day: 2
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    description: |
+      Run only local synthetic Node tests; never contact a supplier,
+      change flight-release status, charge Stripe or activate outreach.
+
+
   # =================================================================
   # CRITICAL — TIME-SENSITIVE
   # =================================================================
