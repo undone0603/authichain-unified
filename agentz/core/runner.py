@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import sys
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -44,7 +45,7 @@ class Workflow:
     context_fetcher: Optional[str] = None
     max_retries: int = 0
     # ── Launch Governor: Capital & Reputation Firewall ──
-    risk_class: str = "low"                          # low | medium | high | critical
+    risk_class: str = "unknown"                          # low | medium | high | critical
     financial_limit_usd: float = 0.0                 # 0 = no budget cap
     reputational_impact: str = "low"                 # low | medium | high
     requires_human_approval: bool = False            # forces CONFIRM even in AUTO
@@ -154,7 +155,7 @@ def execute(
     # Promote confirm if workflow self-flags it OR risk firewall requires it
     from agentz.core.risk_firewall import should_force_confirm as _should_force
     force_confirm = _should_force(
-        getattr(wf, "risk_class", "low"),
+        getattr(wf, "risk_class", "unknown"),
         getattr(wf, "requires_human_approval", False),
         mode.value,
     )
@@ -189,6 +190,18 @@ def execute(
         if assessment.escalated_mode == "confirm":
             effective_mode = Mode.CONFIRM
 
+    # API and scheduled callers have no interactive approver. Never let a
+    # confirmation-required workflow reach a handler or context fetcher there.
+    if effective_mode == Mode.CONFIRM and not sys.stdin.isatty():
+        return RunResult(
+            workflow_id=wf.id,
+            status="blocked",
+            started_at=started_iso,
+            finished_at=datetime.now(timezone.utc).isoformat(),
+            duration_s=time.time() - started,
+            notes=f"risk firewall requires interactive confirmation for {wf.id}; no TTY available",
+        )
+
     print(f"\n[{wf.priority.upper()}] {wf.id} : {wf.title}")
     print(f"   mode={effective_mode.value}  type={wf.type}  est={wf.estimated_minutes}min")
     if wf.description:
@@ -205,11 +218,18 @@ def execute(
     if wf.context_fetcher and mode != Mode.DRY_RUN:
         import shlex
         import subprocess
-        ctx.step(f"Context: Running fetcher - {wf.context_fetcher}")
-        try:
+
+        def _run_context_fetcher():
             cmd = shlex.split(wf.context_fetcher)
-            output = subprocess.check_output(cmd, text=True)
-            setattr(ctx, "fetched_context", output)
+            return subprocess.check_output(cmd, text=True)
+
+        try:
+            output = ctx.step(
+                f"Context: Running fetcher - {wf.context_fetcher}",
+                action=_run_context_fetcher,
+            )
+            if output is not None:
+                setattr(ctx, "fetched_context", output)
         except Exception as e:
             print(f"   [!] Context fetcher failed: {e}")
 
