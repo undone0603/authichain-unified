@@ -53,6 +53,9 @@ CRED_KEY_TO_ENV = {
     "outreach_admin_token": "OUTREACH_ADMIN_TOKEN",
     "outreach_worker_url":   "OUTREACH_WORKER_URL",
     "agent_secret":         "AGENT_SECRET",
+    "agent_secret_read":    "AGENT_SECRET_READ",
+    "agent_secret_run":     "AGENT_SECRET_RUN",
+    "agent_secret_credentials": "AGENT_SECRET_CREDENTIALS",
     "tinyfish_api_key":     "TINYFISH_API_KEY",
     # OpenClaw bridge (AgentZ → claw.authichain.com)
     "openclaw_api_key":     "OPENCLAW_API_KEY",
