@@ -31,14 +31,6 @@ jobs:
     # Fork PRs stay on ubuntu-24.04; same-repo PRs keep WSL.
     runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","Linux","ARM64","authichain-wsl"]') || 'ubuntu-24.04' }} # pragma: allowlist secret
     timeout-minutes: 30
-    # This job requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository
-    # secrets to talk to the live product ledger. Those secrets are not
-    # configured for every PR (e.g. forks). The `secrets` context is not
-    # available in a job-level `if`, so the availability check runs as the
-    # first step and the audit step is guarded with an env-based condition.
-    env:
-      # CFA-215: false on pull_request so PR code never receives these secrets.
-      HAS_SUPABASE_SECRETS: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
 
     steps:
       - name: Checkout repository
@@ -57,17 +49,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements-agentz.txt
 
-      - name: Check secrets availability
-        run: |
-          if [ "${HAS_SUPABASE_SECRETS}" = "true" ]; then
-            echo "Supabase secrets available - running audit."
-          else
-            echo "Supabase secrets unavailable - skipping audit."
-          fi
-
-      - name: Run Compliance Audit
-        if: env.HAS_SUPABASE_SECRETS == 'true'
-        env:
-          SUPABASE_URL: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_URL || '' }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
-        run: python -m agentz.workflows.runner --handler authichain_compliance_audit
+      - name: Run Compliance Audit (dry-run)
+        # CI validates the audit plan only. Live Supabase metadata writes require
+        # an owner-approved execution path and are not part of push/PR automation.
+        run: python -m agentz.workflows.runner --handler authichain_compliance_audit --mode dry-run

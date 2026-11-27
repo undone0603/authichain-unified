@@ -3,7 +3,7 @@ agentz.workflows.handlers.ghost_traffic_engine
 ----------------------------------------------
 Light health probes for the four estate apexes plus money/loop mounts.
 
-No paid APIs. No invented secrets. Safe GET / empty-JSON POST only.
+No paid APIs. No invented secrets. GET-only probes; no write requests.
 Unexpected 5xx (or transport failure) fails the run.
 GET /api/checkout/dpp must 302/303 — do not follow the Stripe redirect.
 """
@@ -27,11 +27,10 @@ ESTATE_APEXES = (
     "https://qron.space/",
 )
 
-# Safe API probes on the protocol apex. POST /api/funnel with {} is 400
-# (validation) and must not insert a row.
+# Read-only API probe on the protocol apex.
+X402_HEALTH_URL = "https://authichain.com/api/x402/health"
 API_PROBES: tuple[tuple[str, str], ...] = (
-    ("GET", "https://authichain.com/api/x402/health"),
-    ("POST", "https://authichain.com/api/funnel"),
+    ("GET", X402_HEALTH_URL),
 )
 
 CHECKOUT_DPP_URL = "https://authichain.com/api/checkout/dpp"
@@ -67,7 +66,7 @@ MONEY_PATHS = (
 
 
 class UnexpectedServerError(RuntimeError):
-    """Raised when a probe returns 5xx, a bad checkout status, or cannot complete."""
+    """Raised when a probe returns an unexpected status or cannot complete."""
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -81,12 +80,10 @@ _OPENER = urllib.request.build_opener(_NoRedirect)
 
 
 def _probe(method: str, url: str, timeout: float = PROBE_TIMEOUT_S) -> int:
+    if method != "GET":
+        raise ValueError("ghost traffic probes are GET-only")
     headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
-    data = None
-    if method == "POST":
-        headers["Content-Type"] = "application/json"
-        data = b"{}"
-    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    req = urllib.request.Request(url, method="GET", headers=headers)
     # Checkout: do not follow 303 to checkout.stripe.com (creates no charge,
     # but we only need the redirect status). Other probes keep urlopen's
     # default follow so a hop-to-5xx still fails.
@@ -101,6 +98,8 @@ def _probe(method: str, url: str, timeout: float = PROBE_TIMEOUT_S) -> int:
 def _status_is_failure(url: str, status: int) -> bool:
     if url in CHECKOUT_URLS:
         return status not in CHECKOUT_OK_STATUSES
+    if url == X402_HEALTH_URL:
+        return status != 200
     return status >= 500
 
 
@@ -155,11 +154,11 @@ def run(ctx: ExecutionContext) -> str:
 
     if failures:
         raise UnexpectedServerError(
-            "ghost-traffic unexpected 5xx, bad checkout status, or transport failure: "
+            "ghost-traffic unexpected status or transport failure: "
             + "; ".join(failures)
         )
 
     return (
         f"Ghost Traffic Engine probed {len(results)} targets at {now}. "
-        "No unexpected 5xx."
+        "No unexpected status."
     )

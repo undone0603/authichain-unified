@@ -554,6 +554,10 @@ workflows:
     estimated_minutes: 20
     requires: [supabase_url, supabase_service_key, openai_api_key]
     prerequisites: [authichain_terminal_ops]
+    risk_class: high
+    reputational_impact: high
+    requires_human_approval: true
+    rollback_strategy: "Live Supabase metadata writes require owner-approved execution; CI remains dry-run."
     description: |
       Autonomous Regulatory Compliance:
       1) Researches current EU Digital Product Passport (DPP) mandates.
@@ -1432,3 +1436,25 @@ workflows:
       and appends a receipt with an execution id and content digests to
       agentz/logs/verification-receipts.jsonl. Demonstration records and
       non-production issuers never count as verified. Never signs or pays.
+
+  - id: ghost_traffic_engine
+    title: "Ghost traffic: light health probes of the estate apexes"
+    priority: medium
+    blocks_revenue: false
+    handler: handlers.ghost_traffic_engine
+    type: shell
+    estimated_minutes: 2
+    requires: []
+    prerequisites: []
+    confirm_before_run: false
+    max_runs_per_day: 4
+    risk_class: low
+    financial_limit_usd: 0
+    reputational_impact: low
+    requires_human_approval: false
+    rollback_strategy: "Read-only probes; nothing to roll back. Turn ghost-traffic.yml off in .github/autonomy.json."
+    description: |
+      GET-only probes of the four estate apexes and the
+      money and loop mounts. No paid APIs, no secrets, no writes. Called by
+      .github/workflows/ghost-traffic.yml through agentz.workflows.runner,
+      which refuses unregistered handlers outside dry-run (#2289).
