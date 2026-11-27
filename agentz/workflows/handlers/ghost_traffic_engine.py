@@ -28,8 +28,9 @@ ESTATE_APEXES = (
 )
 
 # Read-only API probe on the protocol apex.
+X402_HEALTH_URL = "https://authichain.com/api/x402/health"
 API_PROBES: tuple[tuple[str, str], ...] = (
-    ("GET", "https://authichain.com/api/x402/health"),
+    ("GET", X402_HEALTH_URL),
 )
 
 CHECKOUT_DPP_URL = "https://authichain.com/api/checkout/dpp"
@@ -65,7 +66,7 @@ MONEY_PATHS = (
 
 
 class UnexpectedServerError(RuntimeError):
-    """Raised when a probe returns 5xx, a bad checkout status, or cannot complete."""
+    """Raised when a probe returns an unexpected status or cannot complete."""
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -97,6 +98,8 @@ def _probe(method: str, url: str, timeout: float = PROBE_TIMEOUT_S) -> int:
 def _status_is_failure(url: str, status: int) -> bool:
     if url in CHECKOUT_URLS:
         return status not in CHECKOUT_OK_STATUSES
+    if url == X402_HEALTH_URL:
+        return status != 200
     return status >= 500
 
 
