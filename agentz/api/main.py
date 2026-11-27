@@ -455,6 +455,16 @@ app.include_router(sse_router)
 from agentz.api.voice_vision import router as voice_vision_router
 app.include_router(voice_vision_router)
 
+# Federation gossip. Peer endpoints authenticate by signed request and answer
+# 503 until AGENTZ_KEY_DIR + AGENTZ_FEDERATION_MEMBERS are set.
+from agentz.federation.routes import router as federation_router, status as federation_status
+app.include_router(federation_router)
+
+
+@app.get("/federation/status", dependencies=[Depends(verify_token)], tags=["Federation"])
+async def api_federation_status():
+    return federation_status()
+
 
 # --- Local AgentZ browser executor (read-only, allowlisted) ---
 class BrowserTaskInput(BaseModel):
