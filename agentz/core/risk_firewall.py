@@ -99,7 +99,10 @@ def assess_workflow(
       - escalated_mode: "confirm" if the mode was escalated, None otherwise
       - reason: human-readable explanation
     """
-    rc = RiskClass(risk_class) if risk_class in [r.value for r in RiskClass] else RiskClass.LOW
+    unclassified = risk_class not in [r.value for r in RiskClass]
+    # Missing/invalid policy metadata is never a low-risk grant. Treat it as
+    # critical so AUTO is escalated and ProtocolGuardian vetoes still apply.
+    rc = RiskClass.CRITICAL if unclassified else RiskClass(risk_class)
     escalated = RISK_ESCALATION.get(rc)
     mode = current_mode
 
@@ -146,7 +149,10 @@ def assess_workflow(
     return RiskAssessment(
         approved=True,
         escalated_mode=mode if mode != current_mode else None,
-        reason=f"approved (risk={rc.value}, mode={mode})",
+        reason=(
+            f"unclassified risk class '{risk_class}'; explicit human confirmation required"
+            if unclassified else f"approved (risk={rc.value}, mode={mode})"
+        ),
     )
 
 
@@ -187,5 +193,7 @@ def should_force_confirm(
         return False
     if requires_human_approval:
         return True
-    rc = RiskClass(risk_class) if risk_class in [r.value for r in RiskClass] else RiskClass.LOW
+    if risk_class not in [r.value for r in RiskClass]:
+        return True
+    rc = RiskClass(risk_class)
     return RISK_ESCALATION.get(rc) == "confirm"
