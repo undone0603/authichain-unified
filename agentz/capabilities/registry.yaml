@@ -269,3 +269,27 @@ capabilities:
     status: PROPOSED
     agentz_executable: false
     missing: Deployment and routes not verified.
+- id: linkedin_triage
+  name: LinkedIn Inbound Triage & Draft Replies
+  owner: agentz
+  stage: AUTHORIZE
+  lifecycle:
+    - DISCOVER
+    - ADAPT
+    - REGISTER
+    - AUTHORIZE
+    - TEST
+    - VERIFY
+  execution:
+    mode: draft_only
+    auto_send: false
+    requires_founder_approval: true
+    endpoint: /api/founders/linkedin-triage
+  guardrails:
+    dnc_check: true
+    skip_sponsored_inmail: true
+    skip_opt_out_phrases:
+      - "NOT READY FOR OUTREACH"
+      - "unsubscribe"
+      - "do not contact"
+    preserve_protected_main_gates: true
