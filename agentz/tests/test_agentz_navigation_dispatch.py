@@ -1,5 +1,8 @@
 """Focused checks for navigation and production dispatch boundaries."""
 import os
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -20,6 +23,46 @@ class NavigationDispatchTests(unittest.TestCase):
         with patch.dict(os.environ, {"AGENTZ_BROWSER_NETWORK_ISOLATED": "false"}):
             with self.assertRaises(RuntimeError):
                 navigate_public("https://example.org")
+
+    def test_navigation_passes_only_browser_environment_to_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            executable = Path(tmp) / "agent-browser"
+            executable.write_text("#!/bin/sh\n", encoding="utf-8")
+            calls = []
+
+            def fake_run(argv, **kwargs):
+                calls.append((argv, kwargs["env"]))
+                return SimpleNamespace(returncode=0, stdout="snapshot", stderr="")
+
+            env = {
+                "PATH": os.environ.get("PATH", ""),
+                "AGENTZ_BROWSER_BIN": str(executable),
+                "AGENTZ_BROWSER_NETWORK_ISOLATED": "true",
+                "AGENTZ_BROWSER_CDP_URL": "http://127.0.0.1:9222",
+                "BROWSERBASE_API_KEY": "browser-provider-key",
+                "BROWSERBASE_PROJECT_ID": "browser-project",
+                "AGENT_SECRET": "must-not-cross-process-boundary",
+                "STRIPE_SECRET_KEY": "must-not-cross-process-boundary",
+                "SUPABASE_SERVICE_ROLE_KEY": "must-not-cross-process-boundary",
+                "AGENTZ_GITHUB_CODE_TOKEN": "must-not-cross-process-boundary",
+            }
+            with patch.dict(os.environ, env, clear=True):
+                with patch("agentz.core.public_navigation.subprocess.run", side_effect=fake_run):
+                    result = navigate_public("https://example.org")
+
+            self.assertEqual(result["snapshot"], "snapshot")
+            self.assertEqual(len(calls), 3)  # open, snapshot, close
+            for _argv, child_env in calls:
+                self.assertTrue(child_env["AGENT_BROWSER_SESSION"].startswith("agentz-public-"))
+                self.assertEqual(child_env["AGENTZ_BROWSER_CDP_URL"], "http://127.0.0.1:9222")
+                self.assertEqual(child_env["BROWSERBASE_API_KEY"], "browser-provider-key")
+                self.assertEqual(child_env["BROWSERBASE_PROJECT_ID"], "browser-project")
+                for secret in (
+                    "AGENT_SECRET", "STRIPE_SECRET_KEY",
+                    "SUPABASE_SERVICE_ROLE_KEY", "AGENTZ_GITHUB_CODE_TOKEN",
+                    "AGENTZ_BROWSER_NETWORK_ISOLATED",
+                ):
+                    self.assertNotIn(secret, child_env)
 
     def test_dispatch_needs_authorization_and_gate(self):
         sha = "a" * 40
