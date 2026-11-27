@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# Operator browser: a second network-isolated Chromium for a human or a
+# supervising agent, next to AgentZ's own browser host and never inside it.
+#
+#   agentz-operator-browser up            start operator Chromium + CDP relay on 127.0.0.1:9223
+#   agentz-operator-browser down          remove them (AgentZ's browser host is untouched)
+#   agentz-operator-browser status        container state + CDP version for both browsers
+#   agentz-operator-browser test          prove separation from AgentZ's browser and the same egress isolation
+#   agentz-operator-browser handoff ...   run the handoff exchange inside the AgentZ container
+#                                          (python -m agentz.core.browser_handoff; see --help)
+#
+# Why a second browser: AgentZ drives isobrowser-chrome over CDP 127.0.0.1:9222 on its own,
+# one session per task. A client attached to that same browser could read, steer or close
+# AgentZ's tabs. The operator browser shares nothing with it except the egress proxy:
+#
+#   isobrowser-operator-chrome  chromedp/headless-shell on isobrowser-net (.11) only; same
+#                               hardening and same squid egress as isobrowser-chrome.
+#   isobrowser-operator-relay   alpine/socat on isobrowser-edge, published 127.0.0.1:9223 only,
+#                               plus isobrowser-net (.6); it only ever dials the operator browser.
+#
+# Opt-in and non-interfering by construction:
+#   - It needs agentz-browser-stack to be up (network + egress) and refuses to start otherwise.
+#     It never calls the stack's up/down/ensure and is not run by agentz-browser-stack.timer.
+#   - --restart no: it does not come back after a reboot or Docker restart. Start it per use.
+#   - The profile lives on tmpfs, so `down` (or a reboot) erases cookies and storage.
+#   - CDP is bound to 127.0.0.1. Reaching it from another machine is an owner decision
+#     (SSH local forward, or Cloudflare Tunnel + Access): see docs/agentz/remote-browser.md.
+#     CDP has no authentication of its own; never publish it on 0.0.0.0.
+set -euo pipefail
+
+NET=isobrowser-net
+EDGE=isobrowser-edge
+PROXY_IP=172.31.250.2
+OP_RELAY_IP=172.31.250.6
+OP_BROWSER_IP=172.31.250.11
+MAIN_CDP=127.0.0.1:9222
+OP_CDP=127.0.0.1:9223
+CHROME_IMAGE=chromedp/headless-shell:latest
+RELAY_IMAGE=alpine/socat:latest
+PROBE_IMAGE=alpine/socat:latest
+OP_NAMES="isobrowser-operator-relay isobrowser-operator-chrome"
+AGENTZ_CONTAINER="${AGENTZ_CONTAINER:-authichain-agentz}"
+
+cdp_ok() { curl -fsS -m 3 "http://$1/json/version" >/dev/null 2>&1; }
+running() { [ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null)" = true ]; }
+
+preflight() {
+  if [ "$(docker network inspect "$NET" --format '{{index .Options "com.docker.network.bridge.inhibit_ipv4"}}' 2>/dev/null)" != true ]; then
+    echo "refused: $NET missing or not inhibit_ipv4; run agentz-browser-stack up first" >&2; exit 3
+  fi
+  if [ "$(docker network inspect "$NET" --format '{{.Internal}}' 2>/dev/null)" != true ]; then
+    echo "refused: $NET is not --internal" >&2; exit 3
+  fi
+  docker network inspect "$EDGE" >/dev/null 2>&1 || { echo "refused: $EDGE missing; run agentz-browser-stack up first" >&2; exit 3; }
+  running isobrowser-egress || { echo "refused: isobrowser-egress not running; run agentz-browser-stack up first" >&2; exit 3; }
+}
+
+up() {
+  preflight
+  # shellcheck disable=SC2086
+  docker rm -f $OP_NAMES >/dev/null 2>&1 || true
+
+  docker run -d --name isobrowser-operator-chrome --restart no \
+    --network "$NET" --ip "$OP_BROWSER_IP" \
+    --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges \
+    --read-only --tmpfs /tmp:rw,size=512m --shm-size 512m \
+    --memory 1g --pids-limit 512 \
+    --label agentz.role=operator-browser \
+    -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/cache -e XDG_CONFIG_HOME=/tmp/config \
+    "$CHROME_IMAGE" \
+    --user-data-dir=/tmp/profile --disable-dev-shm-usage \
+    --proxy-server="http://$PROXY_IP:3128" --proxy-bypass-list='<-loopback>' \
+    --force-webrtc-ip-handling-policy=disable_non_proxied_udp \
+    --disable-background-networking --no-first-run --mute-audio >/dev/null
+
+  docker create --name isobrowser-operator-relay --restart no \
+    --network "$EDGE" -p "$OP_CDP:9222" \
+    --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges --read-only \
+    --memory 64m --pids-limit 128 \
+    --label agentz.role=operator-browser \
+    "$RELAY_IMAGE" TCP-LISTEN:9222,fork,reuseaddr "TCP:$OP_BROWSER_IP:9222" >/dev/null
+  docker network connect --ip "$OP_RELAY_IP" "$NET" isobrowser-operator-relay
+  docker start isobrowser-operator-relay >/dev/null
+
+  for _ in $(seq 1 30); do
+    cdp_ok "$OP_CDP" && { echo "up: operator cdp http://$OP_CDP (AgentZ keeps http://$MAIN_CDP)"; echo "stop with: $0 down"; return 0; }
+    sleep 1
+  done
+  echo "operator CDP not reachable via relay; logs:" >&2
+  docker logs --tail 20 isobrowser-operator-chrome >&2; docker logs --tail 20 isobrowser-operator-relay >&2; exit 1
+}
+
+down() {
+  # shellcheck disable=SC2086
+  docker rm -f $OP_NAMES >/dev/null 2>&1 || true; echo "down: operator browser removed"
+}
+
+status() {
+  docker ps -a --filter label=agentz.role=operator-browser --format '{{.Names}} {{.Image}} {{.Status}}'
+  for cdp in "$OP_CDP" "$MAIN_CDP"; do
+    printf '%s ' "$cdp"
+    curl -fsS -m 3 "http://$cdp/json/version" | grep -E '"Browser"' | tr -d ' ,' || echo "cdp: unreachable"
+  done
+}
+
+probe() { # url -> HTTP status from the proxy, as seen from the isolated network
+  local u="$1" host
+  host=$(sed -E 's#^[a-z]+://(\[[^]]+\]|[^/:]+).*#\1#' <<<"$u")
+  if [[ "$u" == https://* ]]; then
+    docker run --rm --network "$NET" --cap-drop ALL --entrypoint sh "$PROBE_IMAGE" -c \
+      "printf 'CONNECT %s:443 HTTP/1.1\r\nHost: %s:443\r\n\r\n' '$host' '$host' | socat -T10 - TCP:$PROXY_IP:3128 | head -1 | cut -d' ' -f2" \
+      2>/dev/null || echo "000"
+  else
+    docker run --rm --network "$NET" --cap-drop ALL --entrypoint sh "$PROBE_IMAGE" -c \
+      "printf 'GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n' '$u' '$host' | socat -T10 - TCP:$PROXY_IP:3128 | head -1 | cut -d' ' -f2" \
+      2>/dev/null || echo "000"
+  fi
+}
+
+targets() { # cdp -> sorted target ids, one per line
+  curl -fsS -m 5 "http://$1/json/list" | python3 -c 'import json,sys; print("\n".join(sorted(t["id"] for t in json.load(sys.stdin))))'
+}
+
+test_op() {
+  local fail=0 r rip new_id
+  cdp_ok "$OP_CDP" && echo "operator cdp $OP_CDP -> up" || { echo "operator cdp $OP_CDP -> down" >&2; exit 1; }
+  if cdp_ok "$MAIN_CDP"; then echo "agentz   cdp $MAIN_CDP -> up"; else echo "agentz   cdp $MAIN_CDP -> down (separation checks skipped)"; fi
+
+  # Same position on the isolated network, so the same egress rules apply.
+  r=$(probe https://example.com); echo "public  https://example.com (CONNECT) -> $r"; [[ "$r" == 200 ]] || fail=1
+  for u in http://169.254.169.254/ http://127.0.0.1:8000/health http://172.17.0.1:3000/ http://10.0.0.1/ http://192.168.1.1/ http://localtest.me/; do
+    r=$(probe "$u"); echo "private $u -> ${r:-000}"; [[ "$r" == 403 || -z "$r" || "$r" == 000 ]] || fail=1
+  done
+
+  # The operator relay is not reachable from the default bridge, where other containers live.
+  rip=$(docker inspect -f "{{(index .NetworkSettings.Networks \"$EDGE\").IPAddress}}" isobrowser-operator-relay)
+  r=$(docker run --rm --network bridge --cap-drop ALL "$PROBE_IMAGE" -T5 /dev/null "TCP:$rip:9222,connect-timeout=5" >/dev/null 2>&1 && echo OPEN || echo blocked)
+  echo "bridge  -> operator relay $rip:9222 -> $r"; [[ "$r" == blocked ]] || fail=1
+
+  # Separate browsers: a tab opened on the operator browser never appears on AgentZ's.
+  if cdp_ok "$MAIN_CDP"; then
+    [ "$(curl -fsS -m 3 "http://$OP_CDP/json/version" | python3 -c 'import json,sys; print(json.load(sys.stdin)["webSocketDebuggerUrl"].rsplit("/",1)[1])')" != \
+      "$(curl -fsS -m 3 "http://$MAIN_CDP/json/version" | python3 -c 'import json,sys; print(json.load(sys.stdin)["webSocketDebuggerUrl"].rsplit("/",1)[1])')" ] \
+      && echo "browser ids differ -> yes" || { echo "browser ids differ -> NO" >&2; fail=1; }
+    new_id=$(curl -fsS -m 5 -X PUT "http://$OP_CDP/json/new?about:blank" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+    # Read the whole list first: grep -q exiting early under pipefail would read as "not found".
+    main_targets=$(targets "$MAIN_CDP")
+    if grep -qx "$new_id" <<<"$main_targets"; then echo "operator tab visible to agentz -> YES" >&2; fail=1
+    else echo "operator tab visible to agentz -> no"; fi
+    curl -fsS -m 5 "http://$OP_CDP/json/close/$new_id" >/dev/null 2>&1 || true
+  fi
+  [ $fail = 0 ] && echo "OPERATOR BROWSER OK" || { echo "OPERATOR BROWSER FAILED" >&2; exit 1; }
+}
+
+handoff() {
+  running "$AGENTZ_CONTAINER" || { echo "refused: $AGENTZ_CONTAINER not running" >&2; exit 3; }
+  docker exec -i "$AGENTZ_CONTAINER" python -m agentz.core.browser_handoff "$@"
+}
+
+case "${1:-status}" in
+  up) up ;; down) down ;; status) status ;; test) test_op ;;
+  handoff) shift; handoff "$@" ;;
+  *) echo "usage: $0 up|down|status|test|handoff ..." >&2; exit 2 ;;
+esac
