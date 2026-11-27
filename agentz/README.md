@@ -84,7 +84,16 @@ See `../docs/launch-governor.md` and `../docs/technical-reference/` for API and 
 
 - `AGENT_SECRET` must be set in that shell, to the same value claw holds as
   `AGENTZ_API_KEY`. Without it every token-protected route (including
-  `/architect/cycle`) returns 503 on purpose: it fails closed.
+  `/architect/cycle`) returns 503 on purpose: it fails closed. Optional
+  `AGENT_SECRET_READ`, `AGENT_SECRET_RUN`, and `AGENT_SECRET_CREDENTIALS`
+  split that bearer into scopes; when only `AGENT_SECRET` is set, behavior
+  is unchanged. CORS origins default to the apex hosts in `agentz/api/cors.py`
+  (`AGENTZ_CORS_ORIGINS` replaces the list; `*` is refused). SSE clients
+  authenticate with `Authorization: Bearer` or an HttpOnly cookie from
+  `POST /launch/sse/session` — not `?token=`. On-chain `anchor_identity`
+  sign/send stays off unless `AGENTZ_CHAIN_SIGNING_ENABLED=true` and the
+  chain, destination, value and gas allowlists pass.
+
 - `/scan` verifies a scan only when the request carries a signed `record`
   (optional `anchor`) per `protocol/SPEC.md`. `agentz/core/signature.py` runs it
   through `protocol/verifier.mjs`, so `node` must be on `PATH` (or set

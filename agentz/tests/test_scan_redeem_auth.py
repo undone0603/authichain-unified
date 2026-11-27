@@ -4,15 +4,23 @@ only says `verified` when every check actually ran and passed."""
 from __future__ import annotations
 
 import asyncio
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 import agentz.api.main as api
+from agentz.core import credentials as creds
 from agentz.core import trust
 
 SECRET = "test-agent-secret"
+_TOKEN_ENV = {
+    "AGENT_SECRET": "",
+    "AGENT_SECRET_READ": "",
+    "AGENT_SECRET_RUN": "",
+    "AGENT_SECRET_CREDENTIALS": "",
+}
 
 
 def _supabase(*, product=None, scans=None, geo_rows=None, geo_error=False):
@@ -39,6 +47,7 @@ def _supabase(*, product=None, scans=None, geo_rows=None, geo_error=False):
 
 @pytest.fixture
 def client():
+    creds._loaded = True
     sb = _supabase()
     api.app.dependency_overrides[api.get_supabase] = lambda: sb
     try:
@@ -48,7 +57,8 @@ def client():
 
 
 def _secret(value):
-    return patch.object(api, "get", lambda key, *a, **k: value if key == "agent_secret" else None)
+    env = {**_TOKEN_ENV, "AGENT_SECRET": value or ""}
+    return patch.dict(os.environ, env, clear=False)
 
 
 SCAN = {"product_id": "prod-1", "wallet": "0xabc"}

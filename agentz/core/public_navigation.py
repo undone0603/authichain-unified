@@ -11,6 +11,8 @@ import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from agentz.core.browser_executor import browser_subprocess_env
+
 
 def validate_public_url(url: str) -> str:
     if not isinstance(url, str) or len(url) > 2048:
@@ -46,7 +48,7 @@ def navigate_public(url: str, *, timeout: int = 45) -> dict:
     if not executable or not Path(executable).is_file():
         raise RuntimeError("local agent-browser CLI unavailable")
     session = "agentz-public-" + uuid.uuid4().hex
-    env = {**os.environ, "AGENT_BROWSER_SESSION": session}
+    env = browser_subprocess_env({"AGENT_BROWSER_SESSION": session})
     def run(*argv):
         return subprocess.run([executable, *argv], env=env, text=True,
                               capture_output=True, timeout=timeout, check=False)
