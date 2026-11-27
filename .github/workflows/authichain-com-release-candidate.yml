@@ -1,0 +1,93 @@
+name: AuthiChain Worker release candidate (no deployment)
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Current protected main SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  statuses: read
+  deployments: read
+
+jobs:
+  candidate:
+    if: github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.expected_sha
+    runs-on: [self-hosted, Linux, ARM64, authichain-deploy]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22'
+      - name: Verify exact source and AuthiChain CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          node --input-type=module -e '
+            import { verifyLive } from "./scripts/ci/autonomous-release-gate.mjs";
+            console.log(await verifyLive(process.env, fetch, {candidate: true}));
+          '
+      - name: Install dependencies and embed microsite HTML
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
+          node scripts/sync-microsite-packs.mjs
+      - name: Verify Worker receipt and routing behavior
+        working-directory: workers/authichain-com
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile --prefer-offline --config.minimumReleaseAge=0
+          pnpm exec vitest run src/dpp-routes.test.ts
+          pnpm exec tsx --import ./test/register-md.mjs --test src/routing.test.ts
+      - name: Build and identify the Worker candidate
+        id: bundle
+        working-directory: workers/authichain-com
+        run: |
+          set -euo pipefail
+          dir="$(mktemp -d "$RUNNER_TEMP/authichain-candidate.XXXXXXXX")"
+          printf 'directory=%s\n' "$dir" >> "$GITHUB_OUTPUT"
+          npx --yes wrangler@4.149.0 versions upload --minify --keep-vars --dry-run --outdir "$dir/bundle" --config wrangler.toml
+          test -n "$(find "$dir/bundle" -type f -name '*.js' -print -quit)"
+          mkdir "$dir/evidence"
+          tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$dir/bundle" -cf "$dir/evidence/worker-bundle.tar" .
+          (cd "$dir/evidence" && sha256sum worker-bundle.tar > SHA256SUMS)
+          digest="$(cut -d ' ' -f 1 "$dir/evidence/SHA256SUMS")"
+          {
+            echo '### AuthiChain Worker candidate'
+            echo "- Source SHA: ${GITHUB_SHA}"
+            echo "- Candidate bundle SHA-256 (normalized tar): ${digest}"
+            echo '- Intended target: production-cloudflare / authichain-com'
+            echo "- Run: ${GITHUB_RUN_ID} (attempt ${GITHUB_RUN_ATTEMPT})"
+          } > "$dir/evidence/candidate.md"
+          cat "$dir/evidence/candidate.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve exact candidate bytes and receipt
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: authichain-com-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.bundle.outputs.directory }}/evidence/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove local build and evidence files
+        if: always() && steps.bundle.outputs.directory != ''
+        env:
+          CANDIDATE_DIR: ${{ steps.bundle.outputs.directory }}
+        run: |
+          case "$CANDIDATE_DIR" in
+            "$RUNNER_TEMP"/authichain-candidate.*) rm -rf -- "$CANDIDATE_DIR" ;;
+            *) exit 1 ;;
+          esac
