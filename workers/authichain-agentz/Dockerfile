@@ -92,11 +92,15 @@ WORKDIR /app
 COPY --chown=agentz:agentz requirements-agentz.txt .
 COPY --chown=agentz:agentz agentz ./agentz
 # Published bot identities: agentz/core/identity.py reads this (GET /identity).
-COPY --chown=agentz:agentz workers/authichain-com/src/bot-identities.ts ./workers/authichain-com/src/bot-identities.ts
+# Root-owned and read-only (0444, dirs 0755) so the runtime user cannot edit the roster it serves.
+COPY --chown=root:root workers/authichain-com/src/bot-identities.ts ./workers/authichain-com/src/bot-identities.ts
 # Root-owned, read-only for the runtime user: AgentZ can run but not replace these.
 COPY --from=agent_browser /out/agent-browser /opt/agentz-browser/agent-browser
 COPY agentz/runtime/agentz-browser /opt/agentz-browser/agentz-browser
-RUN chmod 755 /opt/agentz-browser /opt/agentz-browser/agent-browser /opt/agentz-browser/agentz-browser
+RUN chmod 755 /opt/agentz-browser /opt/agentz-browser/agent-browser /opt/agentz-browser/agentz-browser \
+    && chown root:root /app/workers /app/workers/authichain-com /app/workers/authichain-com/src \
+    && chmod 755 /app/workers /app/workers/authichain-com /app/workers/authichain-com/src \
+    && chmod 444 /app/workers/authichain-com/src/bot-identities.ts
 
 # Runtime-written dirs: group 0 + g=u so any uid in group 0 can write
 # (`docker run --user <host-uid> --group-add 0`). Not world-writable.
