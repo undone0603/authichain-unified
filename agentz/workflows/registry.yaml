@@ -1450,7 +1450,7 @@ workflows:
     requires_human_approval: false
     rollback_strategy: "Read-only probes; nothing to roll back. Turn ghost-traffic.yml off in .github/autonomy.json."
     description: |
-      Safe GET and empty-JSON POST probes of the four estate apexes and the
+      GET-only probes of the four estate apexes and the
       money and loop mounts. No paid APIs, no secrets, no writes. Called by
       .github/workflows/ghost-traffic.yml through agentz.workflows.runner,
       which refuses unregistered handlers outside dry-run (#2289).
