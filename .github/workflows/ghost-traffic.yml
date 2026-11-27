@@ -40,7 +40,7 @@ jobs:
         id: mode
         run: |
           set -euo pipefail
-          # Schedule is the daily light-probe run (safe GET/POST, no paid APIs).
+          # Schedule is the daily light-probe run (GET-only, no paid APIs).
           # Dispatch defaults dry-run; live probes only when dry_run=false.
           if [ "${{ github.event_name }}" = "schedule" ]; then
             echo "mode=auto" >> "$GITHUB_OUTPUT"
