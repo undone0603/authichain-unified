@@ -151,6 +151,121 @@ describe("hosted MCP documentation and quickstart", () => {
     expect(result.limitations.length).toBeGreaterThan(0);
   });
 
+  describe("JSON-RPC response integrity", () => {
+    const methods = ["initialize", "tools/list", "tools/call"] as const;
+    const defects = [
+      "empty",
+      "wrong version",
+      "wrong ID",
+      "string ID",
+      "both result and error",
+      "neither result nor error",
+    ] as const;
+
+    for (const method of methods) {
+      for (const defect of defects) {
+        it(`rejects ${defect} at ${method} without further requests`, async () => {
+          const seen: string[] = [];
+          const mockFetch: typeof fetch = async (_url, init) => {
+            const body = JSON.parse(String(init?.body ?? "{}"));
+            seen.push(body.method);
+            if (body.method === "notifications/initialized") {
+              return new Response(null, { status: 202 });
+            }
+            const result =
+              body.method === "initialize"
+                ? { protocolVersion: "2025-06-18" }
+                : body.method === "tools/list"
+                  ? { tools: [{ name: "verify_record" }] }
+                  : {
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify({ classification: "verified" }),
+                        },
+                      ],
+                    };
+            const envelope: Record<string, unknown> = {
+              jsonrpc: "2.0",
+              id: body.id,
+              result,
+            };
+            if (body.method === method) {
+              switch (defect) {
+                case "empty":
+                  return new Response(null, { status: 200 });
+                case "wrong version":
+                  envelope.jsonrpc = "1.0";
+                  break;
+                case "wrong ID":
+                  envelope.id = 999;
+                  break;
+                case "string ID":
+                  envelope.id = String(body.id);
+                  break;
+                case "both result and error":
+                  envelope.error = { code: -32603, message: "mock error" };
+                  break;
+                case "neither result nor error":
+                  delete envelope.result;
+                  break;
+              }
+            }
+            return new Response(JSON.stringify(envelope));
+          };
+
+          const result = await runHostedQuickstart({ fetchImpl: mockFetch });
+
+          expect(result.toolCallOk).toBe(false);
+          expect(result.classification).toBeNull();
+          expect(result.limitations).toContain(
+            "Invalid or mismatched JSON-RPC response"
+          );
+          const expected = [
+            "initialize",
+            "notifications/initialized",
+            "tools/list",
+            "tools/call",
+          ];
+          expect(seen).toEqual(expected.slice(0, expected.indexOf(method) + 1));
+        });
+      }
+    }
+
+    it("does not call a tool that was not advertised", async () => {
+      const seen: string[] = [];
+      const mockFetch: typeof fetch = async (_url, init) => {
+        const body = JSON.parse(String(init?.body ?? "{}"));
+        seen.push(body.method);
+        if (body.method === "notifications/initialized") {
+          return new Response(null, { status: 202 });
+        }
+        return new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: body.id,
+            result:
+              body.method === "initialize"
+                ? { protocolVersion: "2025-06-18" }
+                : { tools: [{ name: "get_pricing" }] },
+          })
+        );
+      };
+
+      const result = await runHostedQuickstart({ fetchImpl: mockFetch });
+
+      expect(result.connected).toBe(true);
+      expect(result.toolCallOk).toBe(false);
+      expect(result.classification).toBeNull();
+      expect(result.limitations).toContain("verify_record was not advertised");
+      expect(seen).toEqual([
+        "initialize",
+        "notifications/initialized",
+        "tools/list",
+      ]);
+    });
+  });
+
   it("takes the endpoint from --endpoint, then AUTHICHAIN_MCP_ENDPOINT", () => {
     const free = "https://authichain.com/mcp/free";
     expect(endpointFromArgs(["--endpoint", free], {})).toBe(free);
