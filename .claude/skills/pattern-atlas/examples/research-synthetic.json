@@ -1,0 +1,54 @@
+{
+  "schema": "pattern-atlas/research-v1",
+  "allow_hosts": ["alpha.example.org", "beta.example.edu"],
+  "sources": [
+    {
+      "id": "source_alpha",
+      "url": "https://alpha.example.org/record",
+      "publisher_label": "Fictional Publisher Alpha",
+      "publisher_group": "alpha",
+      "source_kind": "primary"
+    },
+    {
+      "id": "source_beta",
+      "url": "https://beta.example.edu/record",
+      "publisher_label": "Fictional Publisher Beta",
+      "publisher_group": "beta",
+      "source_kind": "secondary"
+    }
+  ],
+  "observations": [
+    {
+      "id": "event_date",
+      "statement": "The original fictional announcement used the 2020 date",
+      "source_ids": ["source_alpha", "source_beta"],
+      "support_quote": "Event date: April 5, 2020",
+      "refute_quote": "Event date: April 5, 2019"
+    },
+    {
+      "id": "joint_authorship",
+      "statement": "The two records have the same author",
+      "source_ids": ["source_alpha", "source_beta"],
+      "support_quote": "Both records share the same author",
+      "refute_quote": "The records have different authors"
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "independent",
+      "description": "The fictional events are independently authored",
+      "predictions": [
+        {"observation_id": "event_date", "expected": "support"},
+        {"observation_id": "joint_authorship", "expected": "refute"}
+      ]
+    },
+    {
+      "id": "coauthored",
+      "description": "The fictional events share an author",
+      "predictions": [
+        {"observation_id": "event_date", "expected": "support"},
+        {"observation_id": "joint_authorship", "expected": "support"}
+      ]
+    }
+  ]
+}
