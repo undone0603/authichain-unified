@@ -8,6 +8,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 - [CLAUDE.md](../CLAUDE.md) — AI context, essential commands, architecture summary
 - [GEMINI.md](../GEMINI.md) — AgentZ autonomous launch conventions
 - [AGENTS.md](../AGENTS.md) — Next.js agent rules
+- [ENCYCLOPEDIA.md](ENCYCLOPEDIA.md) — AuthiChain + AgentZ canonical glossary (A–Z terms, money surface, guardrails)
 - [project/START_HERE.md](project/START_HERE.md) — conversion funnel tracking quickstart
 - [project/todo.md](project/todo.md) — platform TODO / progress tracker
 - [project/SAM_PREP.md](project/SAM_PREP.md) — live SAM.gov record; contracts/SAM = ZACHARY KIETZMAN, IRS = AuthiChain, Inc.
@@ -106,6 +107,7 @@ _Navigable map of the documentation estate. The repo is `undone0603/authichain-u
 
 ## Reference
 
+- [ENCYCLOPEDIA.md](ENCYCLOPEDIA.md) — AuthiChain + AgentZ canonical glossary
 - [openapi.yaml](openapi.yaml) — API spec
 - [archive/](archive/) — archived cf-workers bundles & misc session artifacts
 - [submissions/](submissions/) — grant submission drafts
