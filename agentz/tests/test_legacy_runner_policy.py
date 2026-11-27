@@ -11,6 +11,7 @@ import pytest
 
 from agentz.core import runner as core_runner
 from agentz.core.modes import ExecutionContext, Mode
+from agentz.core.risk_firewall import assess_workflow, should_force_confirm
 from agentz.workflows import runner as wf_runner
 from agentz.workflows.handlers.gsc_setup import run as run_gsc_setup
 
@@ -19,6 +20,7 @@ def _wf(**overrides):
     base = dict(
         id="policy_probe", title="t", priority="low", blocks_revenue=False,
         handler="handlers.policy_probe", type="shell", estimated_minutes=1,
+        risk_class="low",
     )
     base.update(overrides)
     return core_runner.Workflow(**base)
@@ -165,3 +167,40 @@ def test_gsc_setup_auto_creates_file_only_inside_target(tmp_path, monkeypatch):
     result = run_gsc_setup(ctx)
     assert "complete" in result
     assert target.read_text(encoding="utf-8") == "google-site-verification: google7c95eee4dd86e0e9.html"
+
+
+def test_unclassified_risk_escalates_to_confirm(probe):
+    assessment = assess_workflow(
+        wf_id="policy_probe",
+        risk_class="unclassified",
+        financial_limit_usd=0,
+        requires_human_approval=False,
+        current_mode="auto",
+        audit_log_path=probe.log,
+    )
+    assert assessment.approved
+    assert assessment.escalated_mode == "confirm"
+    assert "unclassified" in assessment.reason
+    assert should_force_confirm("unclassified", False, "auto")
+
+
+def test_unclassified_registered_handler_refused_without_tty(probe, monkeypatch):
+    probe.registry["policy_probe"] = _wf(risk_class="unknown")
+    monkeypatch.setattr("sys.stdin", types.SimpleNamespace(isatty=lambda: False))
+    assert wf_runner.main(["--handler", "policy_probe", "--mode", "auto"]) == wf_runner.POLICY_REFUSED
+    assert probe.calls == []
+
+
+def test_core_execute_unknown_risk_blocks_before_context_fetcher(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(core_runner, "check_all", lambda required: ([], []))
+    monkeypatch.setattr("sys.stdin", types.SimpleNamespace(isatty=lambda: False))
+    monkeypatch.setattr(
+        "subprocess.check_output",
+        lambda *args, **kwargs: calls.append((args, kwargs)) or "must not run",
+    )
+    wf = _wf(risk_class="unknown", context_fetcher="echo must-not-run")
+    result = core_runner.execute(wf, Mode.AUTO, audit_log_path=tmp_path / "core.jsonl")
+    assert result.status == "blocked"
+    assert "no TTY" in result.notes
+    assert calls == []
