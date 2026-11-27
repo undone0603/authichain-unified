@@ -45,7 +45,7 @@ class Workflow:
     context_fetcher: Optional[str] = None
     max_retries: int = 0
     # ── Launch Governor: Capital & Reputation Firewall ──
-    risk_class: str = "unknown"                          # low | medium | high | critical
+    risk_class: str = "unknown"                          # unknown | low | medium | high | critical
     financial_limit_usd: float = 0.0                 # 0 = no budget cap
     reputational_impact: str = "low"                 # low | medium | high
     requires_human_approval: bool = False            # forces CONFIRM even in AUTO
