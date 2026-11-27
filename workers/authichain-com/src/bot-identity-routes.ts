@@ -282,7 +282,7 @@ export function renderBotPage(bot: Bot): string {
   const operator = !op
     ? ""
     : op.ok
-      ? `<dt>Operator</dt><dd><span class="ok">Operator proof checked just now.</span> A statement signed by this agent's key on ${esc(op.issuedAt ?? "")} names GitHub account <a href="https://github.com/${esc(op.operatorGithub ?? "")}">${esc(op.operatorGithub ?? "")}</a> and ${esc(op.operatorDomain ?? "")} as its operator, and that account <a href="${esc(op.gist)}">published it</a>. <a href="/agents/${bot.slug}/operator-proof.jws">operator-proof.jws</a> (EdDSA JWS; verifier in the gist).</dd>`
+      ? `<dt>Operator</dt><dd><span class="ok">Signature checked just now.</span> A statement signed by this agent's key on ${esc(op.issuedAt ?? "")} names GitHub account <a href="https://github.com/${esc(op.operatorGithub ?? "")}">${esc(op.operatorGithub ?? "")}</a> and ${esc(op.operatorDomain ?? "")} as its operator, and that account <a href="${esc(op.gist)}">published it</a>. <a href="/agents/${bot.slug}/operator-proof.jws">operator-proof.jws</a> (EdDSA JWS; verifier in the gist).</dd>`
       : `<dt>Operator</dt><dd class="bad">Operator proof failed its check just now (${esc(op.reasons.join(", "))}). Do not rely on it.</dd>`;
   const notProven = op?.ok
     ? "What it does not prove: whether its output is accurate or safe, or that any third party endorses it. The operator line above rests on the agent's key and the operator's GitHub account, not on any third party."
