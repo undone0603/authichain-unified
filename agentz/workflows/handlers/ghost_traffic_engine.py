@@ -27,11 +27,9 @@ ESTATE_APEXES = (
     "https://qron.space/",
 )
 
-# Safe API probes on the protocol apex. POST /api/funnel with {} is 400
-# (validation) and must not insert a row.
+# Read-only API probe on the protocol apex.
 API_PROBES: tuple[tuple[str, str], ...] = (
     ("GET", "https://authichain.com/api/x402/health"),
-    ("POST", "https://authichain.com/api/funnel"),
 )
 
 CHECKOUT_DPP_URL = "https://authichain.com/api/checkout/dpp"
@@ -81,12 +79,10 @@ _OPENER = urllib.request.build_opener(_NoRedirect)
 
 
 def _probe(method: str, url: str, timeout: float = PROBE_TIMEOUT_S) -> int:
+    if method != "GET":
+        raise ValueError("ghost traffic probes are GET-only")
     headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
-    data = None
-    if method == "POST":
-        headers["Content-Type"] = "application/json"
-        data = b"{}"
-    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    req = urllib.request.Request(url, method="GET", headers=headers)
     # Checkout: do not follow 303 to checkout.stripe.com (creates no charge,
     # but we only need the redirect status). Other probes keep urlopen's
     # default follow so a hop-to-5xx still fails.
