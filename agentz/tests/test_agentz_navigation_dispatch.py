@@ -21,6 +21,42 @@ class NavigationDispatchTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 navigate_public("https://example.org")
 
+    def test_navigation_subprocess_env_is_allowlisted(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import MagicMock
+
+        captured = {}
+
+        def fake_run(argv, env=None, **kwargs):
+            captured["env"] = env
+            result = MagicMock()
+            result.returncode = 0
+            result.stdout = "snapshot"
+            result.stderr = ""
+            return result
+
+        with tempfile.TemporaryDirectory() as tmp:
+            binary = Path(tmp) / "agent-browser"
+            binary.write_text("#!/bin/sh\nexit 0\n")
+            binary.chmod(0o700)
+            env = {
+                "AGENTZ_BROWSER_NETWORK_ISOLATED": "true",
+                "AGENTZ_BROWSER_BIN": str(binary),
+                "AGENT_SECRET": "must-not-leak",
+                "SUPABASE_SERVICE_ROLE_KEY": "must-not-leak",
+                "PATH": os.environ.get("PATH", "/usr/bin"),
+            }
+            with patch.dict(os.environ, env, clear=False), patch(
+                "agentz.core.public_navigation.subprocess.run", side_effect=fake_run
+            ):
+                navigate_public("https://example.org")
+        self.assertIsNotNone(captured.get("env"))
+        self.assertNotIn("AGENT_SECRET", captured["env"])
+        self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", captured["env"])
+        self.assertIn("PATH", captured["env"])
+        self.assertIn("AGENT_BROWSER_SESSION", captured["env"])
+
     def test_dispatch_needs_authorization_and_gate(self):
         sha = "a" * 40
         with self.assertRaises(PermissionError):
