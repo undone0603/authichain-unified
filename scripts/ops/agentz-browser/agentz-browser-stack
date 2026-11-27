@@ -32,10 +32,10 @@ RELAY_IP=172.31.250.5
 BROWSER_IP=172.31.250.10
 CDP_HOST_PORT=127.0.0.1:9222
 CONF_DIR="$HOME/.config/agentz/browser"
-CHROME_IMAGE=chromedp/headless-shell:latest
-PROXY_IMAGE=ubuntu/squid:latest
-RELAY_IMAGE=alpine/socat:latest
-PROBE_IMAGE=alpine/socat:latest
+CHROME_IMAGE=chromedp/headless-shell@sha256:381353d3530ab9d579d2fe8b9c0f4519c995617f5a71daf6bb649e2d12005bd9  # was :latest; multi-arch index pinned 2026-11-27
+PROXY_IMAGE=ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029  # was :latest; multi-arch index pinned 2026-11-27
+RELAY_IMAGE=alpine/socat@sha256:5aa280c6fc5bee94dbd2bbdf2a58d30f50396eaa110be84b03636945b157ae68  # was :latest; multi-arch index pinned 2026-11-27
+PROBE_IMAGE=alpine/socat@sha256:5aa280c6fc5bee94dbd2bbdf2a58d30f50396eaa110be84b03636945b157ae68  # same pin as RELAY_IMAGE
 NAMES="isobrowser-relay isobrowser-chrome isobrowser-egress"
 
 write_conf() {
