@@ -28,14 +28,6 @@ import {
 } from "./growth/emit";
 import type { GrowthEvent } from "./growth/loops";
 import { CHECKOUT_REDIRECT_HEADERS, pickCheckoutEmail } from "./checkout-email";
-
-/** True for addresses on reserved test domains (RFC 2606 / RFC 6761) that cannot be real customers. */
-export function isReservedTestEmail(email: string | null | undefined): boolean {
-  const domain = String(email || "").toLowerCase().split("@")[1] || "";
-  if (!domain) return false;
-  if (["example.com", "example.org", "example.net"].includes(domain)) return true;
-  return /\.(test|example|invalid|localhost)$/.test(domain) || ["test", "example", "invalid", "localhost"].includes(domain);
-}
 import {
   DPP_OFFER_KEY,
   GATED_CHECKOUT_ORIGIN,
@@ -51,6 +43,14 @@ import {
 import { RETIRED_GATED_PLAN_IDS } from "./retired-plans";
 
 export { GATED_CHECKOUT_ORIGIN, gatedCheckoutUrl };
+
+/** True for addresses on reserved test domains (RFC 2606 / RFC 6761) that cannot be real customers. */
+export function isReservedTestEmail(email: string | null | undefined): boolean {
+  const domain = String(email || "").toLowerCase().split("@")[1] || "";
+  if (!domain) return false;
+  if (["example.com", "example.org", "example.net"].includes(domain)) return true;
+  return /\.(test|example|invalid|localhost)$/.test(domain) || ["test", "example", "invalid", "localhost"].includes(domain);
+}
 
 /** Friendly aliases → catalogue ids for /checkout/<alias>. */
 const PLAN_ALIASES: Record<string, PlanId> = {
