@@ -16,5 +16,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+      - name: Install minimal AgentZ runner dependencies
+        run: python -m pip install --disable-pip-version-check pyyaml httpx python-dotenv
       - name: Audit the checkout
         run: python -m agentz.workflows.runner --handler repo_audit_integrate --mode dry-run
