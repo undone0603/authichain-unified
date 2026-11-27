@@ -12,6 +12,32 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
+_BROWSER_ENV_KEYS = frozenset({
+    "PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TMPDIR",
+    "XDG_RUNTIME_DIR", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "XDG_DATA_HOME",
+})
+_BROWSER_CONNECTION_KEYS = frozenset({
+    "AGENTZ_BROWSER_CDP_URL",
+    "BROWSERBASE_API_KEY", "BROWSERBASE_PROJECT_ID",
+    "BROWSER_USE_API_KEY",
+})
+
+
+def _browser_subprocess_env(session: str) -> dict[str, str]:
+    """Pass only runtime/profile and browser-provider settings to the CLI.
+
+    The AgentZ API process may hold AGENT_SECRET, database keys, payment
+    credentials and other unrelated secrets. The browser CLI needs none of
+    those; do not inherit the full server environment into a child process.
+    """
+    env = {
+        key: value for key, value in os.environ.items()
+        if key in _BROWSER_ENV_KEYS or key in _BROWSER_CONNECTION_KEYS
+    }
+    env["AGENT_BROWSER_SESSION"] = session
+    return env
+
+
 def validate_public_url(url: str) -> str:
     if not isinstance(url, str) or len(url) > 2048:
         raise ValueError("invalid URL")
@@ -46,10 +72,14 @@ def navigate_public(url: str, *, timeout: int = 45) -> dict:
     if not executable or not Path(executable).is_file():
         raise RuntimeError("local agent-browser CLI unavailable")
     session = "agentz-public-" + uuid.uuid4().hex
-    env = {**os.environ, "AGENT_BROWSER_SESSION": session}
+    env = _browser_subprocess_env(session)
+
     def run(*argv):
-        return subprocess.run([executable, *argv], env=env, text=True,
-                              capture_output=True, timeout=timeout, check=False)
+        return subprocess.run(
+            [executable, *argv], env=env, text=True,
+            capture_output=True, timeout=timeout, check=False,
+        )
+
     try:
         opened = run("open", url)
         if opened.returncode:
