@@ -952,6 +952,67 @@ export default {
   },
 };
 
+/**
+ * Public cert IDs are `/cert/{id}` path segments. Caller-supplied values stay
+ * printable ASCII and bounded so they round-trip; omitted values get a UUID.
+ */
+function resolveCertId(
+  value: unknown
+): { ok: true; certId: string } | { ok: false } {
+  if (value === undefined || value === null) {
+    return { ok: true, certId: crypto.randomUUID() };
+  }
+  if (typeof value !== "string") return { ok: false };
+  if (value.length < 1 || value.length > 128) return { ok: false };
+  if (/[\s/?#%]/.test(value)) return { ok: false };
+  if (!/^[\x21-\x7e]+$/.test(value)) return { ok: false };
+  return { ok: true, certId: value };
+}
+
+/**
+ * GS1 AI 21 (serial) is X..20. Ten CSPRNG bytes as hex is 80 bits, fits the
+ * syntax, and is not derived from the destination URL or a reused GTIN.
+ */
+function generateSerial(): string {
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  let hex = "";
+  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
+function resolveSerial(
+  value: unknown
+): { ok: true; serial: string; supplied: boolean } | { ok: false } {
+  if (value === undefined || value === null) {
+    return { ok: true, serial: generateSerial(), supplied: false };
+  }
+  if (typeof value !== "string" || value.length < 1) return { ok: false };
+  return { ok: true, serial: value, supplied: true };
+}
+
+async function serialTakenOnGtin(
+  env: Env,
+  gtin: string,
+  serial: string
+): Promise<boolean> {
+  const row = await env.DB.prepare(
+    "SELECT lookup_key FROM seals WHERE gtin = ?1 AND serial = ?2 LIMIT 1"
+  )
+    .bind(gtin, serial)
+    .first<{ lookup_key: string }>();
+  return Boolean(row);
+}
+
+async function certIdTaken(env: Env, certId: string): Promise<boolean> {
+  const row = await env.DB.prepare(
+    "SELECT lookup_key FROM seals WHERE cert_id = ?1 COLLATE NOCASE LIMIT 1"
+  )
+    .bind(certId)
+    .first<{ lookup_key: string }>();
+  return Boolean(row);
+}
+
 /** Register a seal. Requires ISSUE_SECRET; refuses outright if unset. */
 async function handleIssue(request: Request, env: Env): Promise<Response> {
   if (!env.ISSUE_SECRET) {
@@ -961,8 +1022,7 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
     );
   }
 
-  const auth = request.headers.get("authorization") || "";
-  if (auth !== `Bearer ${env.ISSUE_SECRET}`) {
+  if (!hasIssueAuthorization(request, env.ISSUE_SECRET)) {
     return json({ error: "unauthorized" }, 401);
   }
 
@@ -973,8 +1033,13 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
     return json({ error: "invalid_json" }, 400);
   }
 
-  const certId = typeof body.certId === "string" ? body.certId : null;
-  if (!certId) return json({ error: "certId_required" }, 400);
+  const cert = resolveCertId(body.certId);
+  if (!cert.ok) return json({ error: "invalid_cert_id" }, 400);
+  const { certId } = cert;
+
+  const serialResult = resolveSerial(body.serial);
+  if (!serialResult.ok) return json({ error: "invalid_serial" }, 400);
+  const { serial, supplied: serialSupplied } = serialResult;
 
   const fingerprintInput = body.fingerprintSha256;
   let fingerprintSha256: string | null = null;
@@ -994,8 +1059,7 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
     let path = `/01/${encodeURIComponent(body.gtin)}`;
     if (typeof body.lot === "string")
       path += `/10/${encodeURIComponent(body.lot)}`;
-    if (typeof body.serial === "string")
-      path += `/21/${encodeURIComponent(body.serial)}`;
+    path += `/21/${encodeURIComponent(serial)}`;
     const check = parseDigitalLink(new URL(path, env.RESOLVER_ORIGIN));
     if (!check.ok) {
       return json({ error: "invalid_identifier", detail: check.detail }, 400);
@@ -1007,8 +1071,22 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
     ""
   );
   if (typeof body.lot === "string") fields.lot = body.lot;
-  if (typeof body.serial === "string") fields.serial = body.serial;
+  fields.serial = serial;
   if (!fields.certId) fields.certId = certId;
+
+  if (
+    serialSupplied &&
+    fields.gtin &&
+    (await serialTakenOnGtin(env, fields.gtin, serial))
+  ) {
+    return json({ error: "serial_collision", gtin: fields.gtin, serial }, 409);
+  }
+
+  // Duplicate cert_id makes /cert/{id} ambiguous (loadSeal returns null).
+  // Check on every issue, including caller-supplied serials.
+  if (await certIdTaken(env, certId)) {
+    return json({ error: "already_issued", certId }, 409);
+  }
 
   const key = lookupKey(fields);
   const id = crypto.randomUUID();
@@ -1052,6 +1130,7 @@ async function handleIssue(request: Request, env: Env): Promise<Response> {
       id,
       lookupKey: key,
       certId,
+      serial,
       status: "issued",
       digitalLink: toDigitalLink(env.RESOLVER_ORIGIN, fields),
     },
