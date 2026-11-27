@@ -314,7 +314,7 @@ curl -H "Authorization: Bearer $AGENT_SECRET" \
 curl -H "Authorization: Bearer $AGENT_SECRET" \
   http://localhost:8000/launch/score
 
-# Run a Governor cycle
+# Run a Governor cycle (dry-run unless live=true)
 curl -X POST -H "Authorization: Bearer $AGENT_SECRET" \
   -H "Content-Type: application/json" \
   -d '{"mode": "dry-run", "budget": 50}' \

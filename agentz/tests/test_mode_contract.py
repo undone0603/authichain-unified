@@ -99,9 +99,34 @@ def test_cold_email_live_body_flag():
 
 def test_fail_closed_classifier():
     assert is_fail_closed_workflow(None, "architect") is True
+    assert is_fail_closed_workflow(None, "governor") is True
     assert is_fail_closed_workflow("architect_cycle") is True
+    assert is_fail_closed_workflow("governor_cycle") is True
     assert is_fail_closed_workflow("strainchain_email_pitch") is True
     assert is_fail_closed_workflow("stripe_mcp") is False
+
+
+def test_governor_fail_closed_without_live_flag():
+    mode, coerced, live = resolve_execution_mode(
+        query_mode="auto",
+        body={"mode": "auto"},
+        workflow_id="governor_cycle",
+        endpoint="governor",
+    )
+    assert mode == "dry-run"
+    assert coerced is True
+    assert live is False
+
+
+def test_governor_live_flag_honors_requested_mode():
+    mode, coerced, live = resolve_execution_mode(
+        query_mode="auto",
+        live_query=True,
+        endpoint="governor",
+    )
+    assert mode == "auto"
+    assert coerced is False
+    assert live is True
 
 
 def test_live_flag_without_mode_promotes_social_to_auto():
