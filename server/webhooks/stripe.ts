@@ -1312,12 +1312,14 @@ export async function handleStripeWebhook(
           undefined
         );
 
-        // A paid gap report grants no credits, so nothing else would tell the
-        // founder to send the intake questionnaire. First delivery only: the
-        // duplicate/replay path above returns before reaching here.
+        // A paid gap report grants no credits, so nothing else would send the
+        // buyer the intake questionnaire or tell the founder. First delivery
+        // only: the duplicate/replay path above returns before reaching here.
         const gapOrder = await notifyGapReportPaid(
           session,
-          checkoutLinePriceId(session)
+          checkoutLinePriceId(session),
+          undefined,
+          sendEmail
         );
         if (gapOrder) {
           await auditSafe("battery_gap_report_paid", {
@@ -1326,6 +1328,7 @@ export async function handleStripeWebhook(
             plan: gapOrder.planId,
             amountUsd: gapOrder.amountUsd,
             buyerEmail: gapOrder.email,
+            intakeEmail: gapOrder.intake ?? null,
             status: "awaiting_intake",
           });
         }

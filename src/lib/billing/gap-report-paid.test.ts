@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
 import {
+  gapReportIntakeEmail,
   gapReportOrder,
   gapReportPaidAlert,
   notifyGapReportPaid,
@@ -96,5 +97,75 @@ describe("notifyGapReportPaid", () => {
     const publish = vi.fn().mockRejectedValue(new Error("ntfy down"));
     const order = await notifyGapReportPaid(session(), GAP_PRICE, publish);
     expect(order?.planId).toBe("battery_gap_report");
+  });
+});
+
+describe("gap report intake email", () => {
+  const order = () => gapReportOrder(session(), GAP_PRICE)!;
+
+  it("sends the questionnaire to the buyer with replies to the founder inbox", () => {
+    const e = gapReportIntakeEmail({ ...order(), email: "buyer@example.com" });
+    expect(e.to).toBe("buyer@example.com");
+    expect(e.replyTo).toBe("authichain@gmail.com");
+    expect(e.body).toContain("Model designation");
+    expect(e.body).toContain("EU declaration of conformity");
+    expect(e.body).toContain("cs_live_test123");
+    expect(e.body).toContain("Not a conformity assessment");
+    // No delivery date is promised anywhere in the email.
+    expect(e.body).not.toMatch(/business days|within \d+ days/i);
+    // Team rule: no street address in outbound email.
+    expect(e.body).not.toMatch(/\b\d{1,6} [\w. ]+ (St|Ave|Rd|Blvd|Dr|Ln)\b|\b[A-Z]{2} \d{5}\b/);
+  });
+
+  it("emails the buyer before alerting, and reports the outcome", async () => {
+    const calls: string[] = [];
+    const send = vi.fn(async () => {
+      calls.push("send");
+      return { status: "sent" };
+    });
+    const publish = vi.fn(async (a: { text: string }) => {
+      calls.push("publish");
+      expect(a.text).toContain("Intake questionnaire emailed");
+    });
+    const o = await notifyGapReportPaid(session(), GAP_PRICE, publish, send);
+    expect(o?.intake).toBe("sent");
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual(["send", "publish"]);
+  });
+
+  it("tells the founder to send by hand when the email is not accepted", async () => {
+    for (const [result, expected] of [
+      [{ status: "skipped" }, "skipped"],
+      [{ status: "suppressed" }, "suppressed"],
+      [{ status: "weird" }, "error"],
+    ] as const) {
+      const publish = vi.fn().mockResolvedValue(undefined);
+      const o = await notifyGapReportPaid(session(), GAP_PRICE, publish, async () => result);
+      expect(o?.intake).toBe(expected);
+      expect(publish.mock.calls[0][0].text).toContain("NOT sent");
+      expect(publish.mock.calls[0][0].text).toContain("--questions");
+    }
+  });
+
+  it("never throws when the send throws", async () => {
+    const publish = vi.fn().mockResolvedValue(undefined);
+    const send = vi.fn().mockRejectedValue(new Error("resend down"));
+    const o = await notifyGapReportPaid(session(), GAP_PRICE, publish, send);
+    expect(o?.intake).toBe("error");
+    expect(publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips the send without a buyer email", async () => {
+    const send = vi.fn();
+    const s = session({ customer_details: null, customer_email: null });
+    const o = await notifyGapReportPaid(s, GAP_PRICE, vi.fn().mockResolvedValue(undefined), send);
+    expect(o?.intake).toBe("no_buyer_email");
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("sends nothing for other sales", async () => {
+    const send = vi.fn();
+    expect(await notifyGapReportPaid(session(), DPP_PRICE, vi.fn(), send)).toBeNull();
+    expect(send).not.toHaveBeenCalled();
   });
 });
