@@ -82,6 +82,41 @@ async def identity():
     from agentz.core.identity import identity_status
     return identity_status()
 
+@app.post("/agentz/evidence/sign-identity-challenge", dependencies=[Depends(verify_token)], tags=["AgentZ Evidence"])
+async def sign_agentz_identity_challenge(request: Request):
+    """Protected challenge-response proof; no private key is returned."""
+    from agentz.core.mcp_receipt import sign_identity_challenge
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="INVALID_CHALLENGE") from None
+    if not isinstance(body, dict) or set(body) != {"challenge"}:
+        raise HTTPException(status_code=400, detail="INVALID_CHALLENGE")
+    challenge = body["challenge"]
+    if not isinstance(challenge, str) or not 16 <= len(challenge) <= 256 or not challenge.isascii() or any(ord(c) < 33 or ord(c) > 126 for c in challenge):
+        raise HTTPException(status_code=400, detail="INVALID_CHALLENGE")
+    try:
+        return await run_in_threadpool(sign_identity_challenge, challenge=challenge)
+    except Exception:
+        raise HTTPException(status_code=503, detail="AGENTZ_CHALLENGE_UNAVAILABLE") from None
+
+
+@app.post("/agentz/evidence/sign-mcp-receipt", dependencies=[Depends(verify_token)], tags=["AgentZ Evidence"])
+async def sign_mcp_receipt(request: Request):
+    """Execute allowlisted free MCP pricing and sign observed bytes with AgentZ's own key.
+
+    No caller-supplied evidence is accepted. This operation never mutates business data.
+    """
+    from agentz.core.mcp_receipt import execute_and_sign
+    if request.headers.get("content-length") not in (None, "0") or await request.body():
+        raise HTTPException(status_code=400, detail="REQUEST_BODY_FORBIDDEN")
+    try:
+        return await run_in_threadpool(execute_and_sign)
+    except Exception as exc:
+        # Do not expose filesystem paths, private-key material, or upstream responses.
+        raise HTTPException(status_code=503, detail="MCP_RECEIPT_UNAVAILABLE") from None
+
+
 @app.get("/scout/{city}")
 async def api_scout(city: str, token: bool = Depends(verify_token)):
     from agentz.core.scout import scout_businesses
